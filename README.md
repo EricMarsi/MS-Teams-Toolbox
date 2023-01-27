@@ -1,5 +1,8 @@
 # MicrosoftTeamsUserAccountProvisioningUtility
+
 This PowerShell Script Provisions Users for Microsoft Teams as either a single user or bulk import. It also has some validation functions for users, more to come soon!
+
+https://www.ericmarsi.com/2023/01/27/microsoft-teams-user-account-provisioning-utility/
 
 Features:
 •	Option 10: Provision a Single Use
