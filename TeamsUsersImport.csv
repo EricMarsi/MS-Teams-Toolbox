@@ -1,2 +1,2 @@
-﻿UserPrincipalName,PhoneNumber,OnlineVoiceRoutingPolicy,OnlineAudioConferencingRoutingPolicy,TenantDialPlan,TeamsEmergencyCallingPolicy,TeamsEmergencyCallRoutingPolicy
-user@domain.com,+13305550001,Global,Global,Global,Global,Global
+﻿UserPrincipalName,PhoneNumber,PhoneNumberType,OnlineVoiceRoutingPolicy,OnlineAudioConferencingRoutingPolicy,TenantDialPlan,TeamsEmergencyCallingPolicy,TeamsEmergencyCallRoutingPolicy
+user@domain.com,+13305550001,DirectRouting,Global,Global,Global,Global,Global

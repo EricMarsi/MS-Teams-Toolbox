@@ -1,10 +1,25 @@
-#Script Written By Eric Marsi | www.ericmarsi.com
+#Script Written By Eric Marsi | www.ericmarsi.com | https://www.ericmarsi.com/2023/01/27/microsoft-teams-user-account-provisioning-utility/
+#--------------------------------
+#ChangeLog-----------------------
+#v2301.1
+#   -Initial Release
+#
+#v2302.1
+#   -Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
+#   -Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
+#   -Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
+#   -Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
+#--------------------------------
+
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
     $Script:Name = "Microsoft Teams User Account Provisioning Utility By Eric Marsi"
-    $Script:BuildVersion = "v2301.1"
+    $Script:BuildVersion = "2302.1"
     $Script:LogPath = "C:\_Logs\EM-MSTeamsUserAccountProvUtil\"
     $Script:LogFileName = "ScriptLog"
-    $Script:TeamsPSMinVer = "4.9.1"
+    $Script:TeamsPSMinVer = "4.9.3"
+    $Script:ScriptUpdaterEnabled = $True #Variable to enable or disable the Script GitHub Updater function.
+    $Script:ScriptUpdaterGithubRepo = "EricMarsi/MicrosoftTeamsUserAccountProvisioningUtility"
+    $Script:ScriptUpdaterGithubScriptName = "Microsoft.Teams.User.Account.Provisioning.Utility.ps1"
     $Script:TeamsSession = $False
     $Script:BetaFlightsEnabled = $False #Variable to Enable Beta Features, Do not change here, activate with activation code from main menu
     $Script:TeamsConnection = "<Not Set>"
@@ -14,7 +29,7 @@
 
 Clear-Host
 $DT = Get-Date -Format "MM/dd/yyyy HH:mm:ss:ffff"
-Write-Host "$($Script:Name) $($Script:BuildVersion) Started at: $($DT)`n" -ForegroundColor Green
+Write-Host "$($Script:Name) v$($Script:BuildVersion) Started at: $($DT)`n" -ForegroundColor Green
 
 #Script Tests-----------------------------------------------------------------------------------------------------------------------------------------
 #Verify that the Script is executing as an Administrator
@@ -71,7 +86,7 @@ function Write-Log {
             Message = $Message
         } | Export-Csv -Path "$($Script:LogFilePath)" -Append -NoTypeInformation
     }
-Write-Log -Severity Info -Message "$($Script:Name) $($Script:BuildVersion) Started at: $($DT)"
+Write-Log -Severity Info -Message "$($Script:Name) v$($Script:BuildVersion) Started at: $($DT)"
 Write-Log -Severity Info -Message "Script is Running as an Admin"
 Write-Log -Severity Info -Message "Pass: Log File Directory Check"
 Write-Log -Severity Info -Message "Pass: Logging Function Imported"
@@ -99,6 +114,104 @@ Write-Log -Severity Info -Message "Verifying that the script is executing in the
         Write-Log -Severity ERR -Message "The script is not executing in the PowerShell Console!"
         Write-Error "The script is not executing in the PowerShell Console!" -ErrorAction Stop
     }
+
+function EM-GetLatestGitHubRelease
+    {
+        $ProgressPreference = 'SilentlyContinue' #Speed Up Invoke-WebRequest
+        if ($Script:ScriptUpdaterEnabled = $True)
+            {
+                Write-Host "Script Updater Enabled, Checking the server for any avaliable updates. Please Standby..."
+                Write-Log -Severity Info -Message "Script Updater Enabled, Checking the server for any avaliable updates. Please Standby..."
+                $ReleasesURL = "https://api.github.com/repos/$($Script:ScriptUpdaterGithubRepo)/releases"
+                try
+                    {
+                        $ServerVersion = (Invoke-WebRequest $ReleasesURL -ErrorAction Stop | ConvertFrom-Json)[0].tag_name
+                        Write-Log -Severity Info -Message "Obtained Latest Script Version from the Server"
+                        $GetServerVersion = $True
+                    }
+                catch
+                    {
+                        Write-Host "Failed to get latest version from the server. Continuing with the currently installed version. The Error was: $_.`n" -ForegroundColor Yellow
+                        Write-Log -Severity ERR -Message "Failed to get latest version from the server. Continuing with the currently installed version. The Error was: $_" 
+                        $GetServerVersion = $False
+                    }
+            
+                if ($GetServerVersion -eq $True )
+                    {
+                        if ([Version]$Script:BuildVersion -lt [Version]$ServerVersion)
+                            {
+                                Write-Host "This script has an update avaliable. Some features may not work unless you upgrade to the latest version.`n" -ForegroundColor Yellow
+                                Write-Log -Severity Info -Message "This script has an update avaliable. Script Version: v$($Script:BuildVersion). Server Version: v$($ServerVersion)"
+                                Write-Host "Script Version: v$($Script:BuildVersion)"
+                                Write-Host "Server Version: v$($ServerVersion)`n"
+
+                                $UpdateResponse = Read-Host "Would you like to upgrade to the latest version of this script? (Y/N)"
+
+                                if ($UpdateResponse -eq "Y")
+                                    {
+                                        Write-Host "Downloading & Replacing Script with Server Version"
+                                        Write-Log -Severity Info -Message "User Accepted the Update. Downloading & Replacing Script with Server Version"
+
+                                        if ($PSScriptRoot -ne "") #If Function isnt running in a script, throw the download in C:\
+                                            {
+                                                $DownloadPath = $PSScriptRoot + "\"
+                                            }
+                                        else
+                                            {
+                                                $DownloadPath = "C:\"
+                                            }
+
+                                        $ScriptDownloadURL = "https://github.com/$($Script:ScriptUpdaterGithubRepo)/releases/download/$($ServerVersion)/$($Script:ScriptUpdaterGithubScriptName)"                                        
+                                        $TargetScriptName = $Script:ScriptUpdaterGithubScriptName.Replace('.',' ')
+                                        $TargetScriptName = $TargetScriptName.Replace(' ps1','.ps1')
+                                        $NewScriptPath = "$($DownloadPath)$($TargetScriptName)"
+                                        
+                                        try
+                                            {
+                                                Invoke-WebRequest -URI $ScriptDownloadURL -Out "$($NewScriptPath)" -ErrorAction Stop
+                                                Write-Host "Obtained the latest script version from the server. Relaunching with the updated script. Please Standby...`n" -ForegroundColor Green
+                                                Write-Log -Severity Info -Message "Obtained the latest script version from the server. Relaunching with the updated script. Please Standby..."
+                                                Start-Sleep 3
+                                                $DT = Get-Date -Format "MM/dd/yyyy HH:mm:ss"
+                                                Write-Host "$($Script:Name) v$($Script:BuildVersion) Stopped at: $($DT)`n" -ForegroundColor Green
+                                                Write-Log -Severity Info -Message "$($Script:Name) v$($Script:BuildVersion) Stopped at: $($DT)"
+                                                . $NewScriptPath
+                                                Exit
+                                            }
+                                        catch
+                                            {
+                                                Write-Host "Failed to get latest script version from the server. Continuing with the currently installed version. The Error was: $_.`n" -ForegroundColor Yellow
+                                                Write-Log -Severity ERR -Message "Failed to get latest script version from the server. Continuing with the currently installed version. The Error was: $_."
+                                            }
+                                        
+                                    }
+                                else
+                                    {
+                                        Write-Host "User declined the avaliable update. Continuing with the currently installed version.`n" -ForegroundColor Yellow
+                                        Write-Log -Severity WARN -Message "User declined the avaliable update. Continuing with the currently installed version."
+                                    }
+                            }
+                        elseif ([Version]$Script:BuildVersion -eq [Version]$ServerVersion)
+                            {
+                                Write-Host "Pass: The latest version of this script (v$($Script:BuildVersion)) is already installed. No Update Required.`n" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Pass: The latest version of this script (v$($Script:BuildVersion)) is already installed. No Update Required."
+                            }
+                        else
+                            {
+                                Write-Host "Pass: The script version (v$($Script:BuildVersion)) is a higher than that on the server (v$($ServerVersion)). No Update Required.`n" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Pass: The script version (v$($Script:BuildVersion)) is a higher than that on the server (v$($ServerVersion)). No Update Required."
+                            }
+                    }    
+            }
+        else   
+            {
+                Write-Host "Script Updater Disabled. Continuing without checking for any avaliable updates`n"
+                Write-Log -Severity Info -Message "Script Updater Disabled. Continuing without checking for any avaliable updates"
+            }
+    }
+
+#Verify that the latest version of the script is installed. If not, ask the user if they would like to install it
+EM-GetLatestGitHubRelease
 
 function EM-ValidatePSModule {
     [CmdletBinding()]
@@ -166,19 +279,21 @@ function EM-MainMenu
     {
         clear-host
         Write-Log -Severity Info -Message "Presenting the User Main Menu Options"
-        Write-Host "$($Script:Name) $($Script:BuildVersion)`n"
+        Write-Host "$($Script:Name) v$($Script:BuildVersion)`n"
         Write-Host "Environment Information---------------------------------------------------------------------------"
-        Write-Host "Tenant Domain               : "-ForegroundColor Green -NoNewLine
+        Write-Host "Tenant Domain                 : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:TenantDomain)" -ForegroundColor Yellow
-        Write-Host "Tenant ID                   : "-ForegroundColor Green -NoNewLine
+        Write-Host "Tenant ID                     : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:TenantID)" -ForegroundColor Yellow
-        Write-Host "M365 Admin Credentials      : "-ForegroundColor Green -NoNewLine
+        Write-Host "M365 Admin Credentials        : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:M365Admin)" -ForegroundColor Yellow
-        Write-Host "Teams PS Session Active?    : "-ForegroundColor Green -NoNewLine
+        Write-Host "Teams PS Session Active?      : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:TeamsSession)" -ForegroundColor Yellow
-        Write-Host "Beta Flights Enabled        : "-ForegroundColor Green -NoNewLine
+        Write-Host "Beta Flights Enabled          : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:BetaFlightsEnabled)" -ForegroundColor Yellow
-        Write-Host "Script Log File Path        : "-ForegroundColor Green -NoNewLine
+        Write-Host "Script GitHub Updater Enabled : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:ScriptUpdaterEnabled)" -ForegroundColor Yellow
+        Write-Host "Script Log File Path          : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:LogFilePath)`n" -ForegroundColor Yellow
         Write-Host "Admin Connections (Required)----------------------------------------------------------------------"
         Write-Host "Option 1: Setup Admin Connections" -ForegroundColor Green
@@ -205,6 +320,7 @@ function EM-MainMenu
         $Script:EnvInfo += "M365 Admin Credentials : $($Script:M365Admin)`n"
         $Script:EnvInfo += "Teams PS Session Active? : $($Script:TeamsSession)`n"
         $Script:EnvInfo += "Beta Flights Enabled : $($Script:BetaFlightsEnabled)`n"
+        $Script:EnvInfo += "Script GitHub Updater Enabled : $($Script:ScriptUpdaterEnabled)`n"
         $Script:EnvInfo += "Script Log File Path : $($Script:LogFilePath)"
         Write-Log -Severity Info -Message $($Script:EnvInfo)
     }
@@ -289,26 +405,26 @@ function EM-ProvisionUsers
                 Write-Log -Severity Info -Message "Provisioning $($User.UserPrincipalName) for Microsoft Teams Voice"
 
                 #Assign the Phone Number to the User
-                if (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A"))
+                if (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A") -or ($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A"))
                     {
-                        Write-Host "- Skipping the Assignment of a Phone Number as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Phone Number to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        Write-Host "- Skipping the Assignment of a Phone Number as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Phone Number to $($User.UserPrincipalName) as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL"  
                         $UserLineURISuccess = $True
                     }
                 else
                     {
                         try
                             {
-                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType DirectRouting -PhoneNumber $User.PhoneNumber -ErrorAction Stop
-                                Write-Host "- Assigned the tel:$($User.PhoneNumber) LineURI Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the tel:$($User.PhoneNumber) LineURI Successfully"
+                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $User.PhoneNumber -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
                                 $UserLineURISuccess = $True
                             }
                         catch
                             {
-                                Write-Host "- FAILED to Assign the tel:$($User.PhoneNumber) LineURI. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the tel:$($User.PhoneNumber) LineURI. The Error Was: $_"
-                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType DirectRouting -PhoneNumber $($User.PhoneNumber) -ErrorAction Stop"
+                                Write-Host "- FAILED to Assign the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
+                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($User.PhoneNumber) -ErrorAction Stop"
                                 $UserLineURISuccess = $False
                             }
                     }
@@ -539,6 +655,7 @@ elseif ($Confirm1 -eq "10")
         $Users = $null
         $UserUPN = $null
         $UserPN = $null
+        $UserPNT = $null
         $UserOVRP = $null
         $UserOACRP = $null
         $UserDP = $null
@@ -550,6 +667,7 @@ elseif ($Confirm1 -eq "10")
         Write-Host "For any of the below values, if you would like no value set, please leave the field blank or enter null for none`n"-ForegroundColor Yellow
         $UserUPN = Read-Host "Please enter the UPN for the User you wish to provision (Ex:User@domain.com)"
         $UserPN = Read-Host "Please enter the phone number to assign (Ex: +13305550001)"
+        $UserPNT = Read-Host "Please enter the PhoneNumberType to assign (Ex: DirectRouting, CallingPlans, OperatorConnect)"
         $UserOVRP = Read-Host "Please enter the name of the Online Voice Routing Policy to assign"
         $UserOACRP = Read-Host "Please enter the name of the Online Audio Conferencing Routing Policy to assign"
         $UserDP = Read-Host "Please enter the name of the Dial Plan to assign"
@@ -560,6 +678,7 @@ elseif ($Confirm1 -eq "10")
         $Users = New-Object PSCustomObject
         $Users | Add-Member -NotePropertyName UserPrincipalName -NotePropertyValue $UserUPN
         $Users | Add-Member -NotePropertyName PhoneNumber -NotePropertyValue $UserPN
+        $Users | Add-Member -NotePropertyName PhoneNumberType -NotePropertyValue $UserPNT
         $Users | Add-Member -NotePropertyName OnlineVoiceRoutingPolicy -NotePropertyValue $UserOVRP
         $Users | Add-Member -NotePropertyName OnlineAudioConferencingRoutingPolicy -NotePropertyValue $UserOACRP
         $Users | Add-Member -NotePropertyName TenantDialPlan -NotePropertyValue $UserDP
@@ -668,8 +787,8 @@ elseif ($Confirm1 -eq "12")
                 catch
                     {
                         $Script:Count -= 1
-                        Write-Host "FAILED to Gathered User Calling Settings for $($User.UserPrincipalName). The Error was $_. $($Script:Count) of $($Script:CountInitial) Users Remaining..." -ForegroundColor Red
-                        Write-Log -Severity ERR -Message "FAILED to Gathered User Calling Settings for $($User.UserPrincipalName). The Error was $_. $($Script:Count) of $($Script:CountInitial) Users Remaining..."
+                        Write-Host "FAILED to Gathered User Calling Settings for $($User.UserPrincipalName). The Error was: $_. $($Script:Count) of $($Script:CountInitial) Users Remaining..." -ForegroundColor Red
+                        Write-Log -Severity ERR -Message "FAILED to Gathered User Calling Settings for $($User.UserPrincipalName). The Error was: $_. $($Script:Count) of $($Script:CountInitial) Users Remaining..."
                     }  
             }
 
@@ -694,8 +813,8 @@ elseif ($Confirm1 -eq "12")
                     }
                 catch
                     {
-                        Write-Host "FAILED to save Exported Data to: $($ExportPath). The Error Was $_" -ForegroundColor Green
-                        Write-Log -Severity Info -Message "FAILED to save Exported Data to: $($ExportPath). The Error Was $_" 
+                        Write-Host "FAILED to save Exported Data to: $($ExportPath). The Error Was: $_" -ForegroundColor Green
+                        Write-Log -Severity Info -Message "FAILED to save Exported Data to: $($ExportPath). The Error Was: $_" 
                     }
             }
         else
@@ -782,6 +901,7 @@ while ($Confirm1 -ne "99")
 
 EM-DisconnectTeamsPS
 
+
 $DT = Get-Date -Format "MM/dd/yyyy HH:mm:ss"
-Write-Host "$($Script:Name) $($Script:BuildVersion) Stopped at: $($DT)`n" -ForegroundColor Green
-Write-Log -Severity Info -Message "$($Script:Name) $($Script:BuildVersion) Stopped at: $($DT)"
+Write-Host "$($Script:Name) v$($Script:BuildVersion) Stopped at: $($DT)`n" -ForegroundColor Green
+Write-Log -Severity Info -Message "$($Script:Name) v$($Script:BuildVersion) Stopped at: $($DT)"
