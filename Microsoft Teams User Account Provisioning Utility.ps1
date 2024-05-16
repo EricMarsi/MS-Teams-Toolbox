@@ -5,18 +5,47 @@
 #   -Initial Release
 #
 #v2302.1
-#   -Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
-#   -Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
-#   -Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
-#   -Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
+#   -CHANGE - Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
+#   -FEATURE - Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
+#    -Supported Values are DirectRouting, CallingPlan, and OperatorConnect
+#   -FEATURE - Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
+#   -FEATURE - Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
+#
+#v2310.1_BETA
+#   -BUG - Updated misc script descriptors and other text objects for accuracy
+#   -CHANGE - Script Minimum Teams PS Module updated to 5.7.1 from 4.9.3
+#   -FEATURE - Added support for LocationID in Set-CsPhoneNumberAssignment. This field is optional for DR, required for CP/OC,and requires a new Template CSV
+#   -FEATURE - Added support for assigning Caller ID Policies (CallingLineIdentity) to users
+#
+#v2405.1
+#   -CHANGE - Script Minimum Teams PS Module updated to 6.1.0 from 5.7.1
+#
+#
+#
+#
+#
+#**Future Release Things to Add/Change/Fix**
+#   -BUG - Change the Script Updater to get the name of the running script that will be replaced rather than just guessing the name. This fixes the update bug.
+#   -BUG - SKIPFix the progress counter to show the count of 1 when finished provisioning a single user. "0 of  User(s) Remain..." is how it is displated today.
+#   -CHANGE - Clean up the Provision Account Utility to have a sub function for policy assignement. Makes adding new policies in the future easier and minifies the script.
+#   -FEATURE - Change the Script Updater to skip any checks if the $Script:BuildFlag variable is set to BETA instead of RELEASE.
+#   -FEATURE - Add the ability to Enterprise Voice Enable a User with No PhoneNumber, PhoneNumberType, or LocationID set.
+#   -FEATURE - Add support to assign a Call Park, Calling Policy, Voice Application Policy, or a shared calling policy to a user in both single user and multi-user mode.
+#   -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
+#   -FEATURE - Add support for assigning Private Lines to Users.
+#   -FEATURE - Add the ability to auto-normalize US Numbers from 10 digits or 11-digits to proper E.164 format.
+#   -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
+#   -FEATURE - Provision Teams Rooms Accounts from CSV and Rebrand the script
+#   -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
 #--------------------------------
 
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
     $Script:Name = "Microsoft Teams User Account Provisioning Utility By Eric Marsi"
-    $Script:BuildVersion = "2302.1"
+    $Script:BuildVersion = "2405.1"
+    $Script:BuildFlag = "RELEASE"
     $Script:LogPath = "C:\_Logs\EM-MSTeamsUserAccountProvUtil\"
     $Script:LogFileName = "ScriptLog"
-    $Script:TeamsPSMinVer = "4.9.3"
+    $Script:TeamsPSMinVer = "6.1.0"
     $Script:ScriptUpdaterEnabled = $True #Variable to enable or disable the Script GitHub Updater function.
     $Script:ScriptUpdaterGithubRepo = "EricMarsi/MicrosoftTeamsUserAccountProvisioningUtility"
     $Script:ScriptUpdaterGithubScriptName = "Microsoft.Teams.User.Account.Provisioning.Utility.ps1"
@@ -404,7 +433,7 @@ function EM-ProvisionUsers
                 Write-Host "Provisioning $($User.UserPrincipalName) for Microsoft Teams Voice"
                 Write-Log -Severity Info -Message "Provisioning $($User.UserPrincipalName) for Microsoft Teams Voice"
 
-                #Assign the Phone Number to the User
+                #Assign a Phone Number to the User
                 if (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A") -or ($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Phone Number as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow
@@ -415,21 +444,39 @@ function EM-ProvisionUsers
                     {
                         try
                             {
-                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $User.PhoneNumber -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
+                                if ($User.LocationID -eq "")
+                                    {
+                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $User.PhoneNumber -ErrorAction Stop
+                                        Write-Host "- Assigned the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
+                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
+                                    }
+                                else
+                                    {
+                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $User.PhoneNumber -LocationID $User.LocationID -ErrorAction Stop
+                                        Write-Host "- Assigned the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
+                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully"
+                                    }
                                 $UserLineURISuccess = $True
                             }
                         catch
                             {
-                                Write-Host "- FAILED to Assign the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
-                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($User.PhoneNumber) -ErrorAction Stop"
+                                if ($User.LocationID -eq "")
+                                    {
+                                        Write-Host "- FAILED to Assign the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
+                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
+                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($User.PhoneNumber) -ErrorAction Stop"
+                                    }
+                                else
+                                    {
+                                        Write-Host "- FAILED to Assign the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
+                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_"
+                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($User.PhoneNumber) -LocationID $($User.LocationID) -ErrorAction Stop"
+                                    }
                                 $UserLineURISuccess = $False
                             }
                     }
 
-                #Assign the OVRP to the User
+                #Assign a OVRP to the User
                 if (($User.OnlineVoiceRoutingPolicy -eq "") -or ($User.OnlineVoiceRoutingPolicy -eq "null") -or ($User.OnlineVoiceRoutingPolicy -eq $null) -or ($User.OnlineVoiceRoutingPolicy -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Online Voice Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
@@ -454,7 +501,7 @@ function EM-ProvisionUsers
                             }
                     }
                 
-                #Assign the OACRP to the User
+                #Assign a OACRP to the User
                 if (($User.OnlineAudioConferencingRoutingPolicy -eq "") -or ($User.OnlineAudioConferencingRoutingPolicy -eq "null") -or ($User.OnlineAudioConferencingRoutingPolicy -eq $null) -or ($User.OnlineAudioConferencingRoutingPolicy -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Online Audio Conferencing Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
@@ -479,7 +526,7 @@ function EM-ProvisionUsers
                             }
                     }
                 
-                #Assign the Dial Plan to the User
+                #Assign a Dial Plan to the User
                 if (($User.TenantDialPlan -eq "") -or ($User.TenantDialPlan -eq "null") -or ($User.TenantDialPlan -eq $null) -or ($User.TenantDialPlan -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Tenant Dial Plan as the Value Provided is NULL" -ForegroundColor Yellow
@@ -504,7 +551,7 @@ function EM-ProvisionUsers
                             }
                     }
 
-                #Assign the Emergency Calling Policy to the User
+                #Assign a Emergency Calling Policy to the User
                 if (($User.TeamsEmergencyCallingPolicy -eq "") -or ($User.TeamsEmergencyCallingPolicy -eq "null") -or ($User.TeamsEmergencyCallingPolicy -eq $null) -or ($User.TeamsEmergencyCallingPolicy -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Emergency Calling Policy as the Value Provided is NULL" -ForegroundColor Yellow
@@ -529,7 +576,7 @@ function EM-ProvisionUsers
                             }
                     }
 
-                #Assign the Emergency Call Routing Policy to the User
+                #Assign a Emergency Call Routing Policy to the User
                 if (($User.TeamsEmergencyCallRoutingPolicy -eq "") -or ($User.TeamsEmergencyCallRoutingPolicy -eq "null") -or ($User.TeamsEmergencyCallRoutingPolicy -eq $null) -or ($User.TeamsEmergencyCallRoutingPolicy -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Emergency Call Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
@@ -554,9 +601,34 @@ function EM-ProvisionUsers
                             }
                     }
 
+                #Assign a Caller ID Policy to the User
+                if (($User.CallerIDPolicy -eq "") -or ($User.CallerIDPolicy -eq "null") -or ($User.CallerIDPolicy -eq $null) -or ($User.CallerIDPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Caller ID Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Caller ID Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserCIDPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsCallingLineIdentity -Identity $User.UserPrincipalName -PolicyName $User.CallerIDPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CallerIDPolicy) Caller ID Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CallerIDPolicy) Caller ID Policy Successfully"
+                                $UserCIDPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CallerIDPolicy) Caller ID Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CallerIDPolicy) Caller ID Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsCallingLineIdentity -Identity $($User.UserPrincipalName) -PolicyName $($User.CallerIDPolicy) -ErrorAction Stop"
+                                $UserCIDPSuccess = $False
+                            }
+                    }
+
                 $Script:Count = $Script:Count - 1 #Decrease remaining users count by 1
 
-                if (($UserLineURISuccess -eq $True) -and ($UserOVRPSuccess -eq $True) -and ($UserOACRPSuccess -eq $True) -and ($UserDPSuccess -eq $True) -and ($UserECPSuccess -eq $True) -and ($UserECRPSuccess -eq $True))
+                if (($UserLineURISuccess -eq $True) -and ($UserOVRPSuccess -eq $True) -and ($UserOACRPSuccess -eq $True) -and ($UserDPSuccess -eq $True) -and ($UserECPSuccess -eq $True) -and ($UserECRPSuccess -eq $True) -and ($UserCIDPSuccess -eq $True))
                     {
                         Write-Host ""
                         Write-Host "Provisioned $($User.UserPrincipalName) Successfully! $($Script:Count) of $($Script:CountInitial) User(s) Remain...`n" -ForegroundColor Green
@@ -566,7 +638,7 @@ function EM-ProvisionUsers
                     {
                         Write-Host ""
                         Write-Host "One or More Errors Caused Provisioning to Fail for $($User.UserPrincipalName). $($Script:Count) of $($Script:CountInitial) User(s) Remain...`n" -ForegroundColor Red
-                        Write-Log -Severity ERR -Message "One or More Errors Caused Provisioning to Fail for $($User.UserPrincipalName). $($Script:Count) of $($Script:CountInitial) User(s) Remain..."
+                        Write-Log -Severity Info -Message "One or More Errors Caused Provisioning to Fail for $($User.UserPrincipalName). $($Script:Count) of $($Script:CountInitial) User(s) Remain..."
                     }
                 
             }
@@ -600,7 +672,7 @@ function EM-RetryProvisioningErrors
                                 catch
                                     {
                                         Write-Host "The Command: $($CMD) | Failed Again. The Error Was: $_. $($Script:ErrorCount) of $($Script:ErrorCountInitial) Command(s) Remain..." -ForegroundColor Red
-                                        Write-Log -Severity Info -Message "The Command: $($CMD) | Failed Again. The Error Was: $_. $($Script:ErrorCount) of $($Script:ErrorCountInitial) Command(s) Remain..."
+                                        Write-Log -Severity ERR -Message "The Command: $($CMD) | Failed Again. The Error Was: $_. $($Script:ErrorCount) of $($Script:ErrorCountInitial) Command(s) Remain..."
                                     }
                             }
                     }
@@ -656,34 +728,40 @@ elseif ($Confirm1 -eq "10")
         $UserUPN = $null
         $UserPN = $null
         $UserPNT = $null
+        $UserLID = $null
         $UserOVRP = $null
         $UserOACRP = $null
         $UserDP = $null
         $UserECP = $null
         $UserECRP = $null
+        $UserCIDP = $null
         $Script:Count = 1
 
         #Get User Information
         Write-Host "For any of the below values, if you would like no value set, please leave the field blank or enter null for none`n"-ForegroundColor Yellow
         $UserUPN = Read-Host "Please enter the UPN for the User you wish to provision (Ex:User@domain.com)"
         $UserPN = Read-Host "Please enter the phone number to assign (Ex: +13305550001)"
-        $UserPNT = Read-Host "Please enter the PhoneNumberType to assign (Ex: DirectRouting, CallingPlans, OperatorConnect)"
+        $UserPNT = Read-Host "Please enter the PhoneNumberType to assign (Ex: DirectRouting, CallingPlan, or OperatorConnect)"
+        $UserLID = Read-Host "Please enter the LocationID to assign in GUID Format if applicable. Required for OC/CP else leave blank"
         $UserOVRP = Read-Host "Please enter the name of the Online Voice Routing Policy to assign"
         $UserOACRP = Read-Host "Please enter the name of the Online Audio Conferencing Routing Policy to assign"
         $UserDP = Read-Host "Please enter the name of the Dial Plan to assign"
         $UserECP = Read-Host "Please enter the name of the Emergency Calling Policy to assign"
         $UserECRP = Read-Host "Please enter the name of the Emergency Call Routing Policy to assign"
+        $UserCIDP = Read-Host "Please enter the name of the Caller ID Policy to assign"
 
         [System.Collections.ArrayList]$Script:Users = @()
         $Users = New-Object PSCustomObject
         $Users | Add-Member -NotePropertyName UserPrincipalName -NotePropertyValue $UserUPN
         $Users | Add-Member -NotePropertyName PhoneNumber -NotePropertyValue $UserPN
         $Users | Add-Member -NotePropertyName PhoneNumberType -NotePropertyValue $UserPNT
+        $Users | Add-Member -NotePropertyName LocationID -NotePropertyValue $UserLID
         $Users | Add-Member -NotePropertyName OnlineVoiceRoutingPolicy -NotePropertyValue $UserOVRP
         $Users | Add-Member -NotePropertyName OnlineAudioConferencingRoutingPolicy -NotePropertyValue $UserOACRP
         $Users | Add-Member -NotePropertyName TenantDialPlan -NotePropertyValue $UserDP
         $Users | Add-Member -NotePropertyName TeamsEmergencyCallingPolicy -NotePropertyValue $UserECP
         $Users | Add-Member -NotePropertyName TeamsEmergencyCallRoutingPolicy -NotePropertyValue $UserECRP
+        $Users | Add-Member -NotePropertyName CallerIDPolicy -NotePropertyValue $UserCIDP
         $Script:Users = $Users
 
         Write-Host ""
