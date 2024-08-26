@@ -1,64 +1,85 @@
-#Script Written By Eric Marsi | www.ericmarsi.com | https://www.ericmarsi.com/2023/01/27/microsoft-teams-user-account-provisioning-utility/
-#--------------------------------
-#ChangeLog-----------------------
-#v2301.1
-#   -Initial Release
-#
-#v2302.1
-#   -CHANGE - Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
-#   -FEATURE - Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
-#    -Supported Values are DirectRouting, CallingPlan, and OperatorConnect
-#   -FEATURE - Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
-#   -FEATURE - Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
-#
-#v2310.1_BETA
-#   -BUG - Updated misc script descriptors and other text objects for accuracy
-#   -CHANGE - Script Minimum Teams PS Module updated to 5.7.1 from 4.9.3
-#   -FEATURE - Added support for LocationID in Set-CsPhoneNumberAssignment. This field is optional for DR, required for CP/OC,and requires a new Template CSV
-#   -FEATURE - Added support for assigning Caller ID Policies (CallingLineIdentity) to users
-#
-#v2405.1
-#   -CHANGE - Script Minimum Teams PS Module updated to 6.1.0 from 5.7.1
-#
-#v2408.1
-#   -CHANGE - Script Renamed from "Microsoft Teams User Account Provisioning Utility" to "MS Teams Account Provisioning Utility"
-#   -CHANGE - Script Minimum Teams PS Module updated to 6.4.0 from 6.1.0
-#   -CHANGE - Reorganized the order of policy assignment to be alphabetical based on PowerShell cmdlet
-#   -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
-#   -FEATURE - Added support to assign a Call Park, Calling Policy, Voice Application Policy, Voicemail Policy, Shared Calling Policy, and/or a IP Phone Policy to a user
-#    -Supported Policies: CsCallingLineIdentity, CsOnlineAudioConferencingRoutingPolicy, CsOnlineVoicemailPolicy, CsOnlineVoiceRoutingPolicy, CsTeamsCallingPolicy, CsTeamsCallParkPolicy, CsTeamsEmergencyCallingPolicy, CsTeamsEmergencyCallRoutingPolicy, CsTeamsIPPhonePolicy, CsTeamsSharedCallingRoutingPolicy, CsTeamsVoiceApplicationsPolicy, and CsTenantDialPlan
-#
-#**Future Release Things to Add/Change/Fix**
-#   -BUG - Not Working on a Mac
-#   -BUG - Change the Script Updater to get the name of the running script that will be replaced rather than just guessing the name. This fixes the update bug.
-#   -CHANGE - Clean up the Provision Account Utility to have a sub function for policy assignement. Makes adding new policies in the future easier and minifies the script.
-#   -CHANGE - Update Script to Require PowerShell 7.2 for all functions due to Teams PS Module 6.3.0 now supporting the newer release.
-#   -FEATURE - Change the Script Updater to skip any checks if the $Script:BuildFlag variable is set to BETA instead of RELEASE.
-#   -FEATURE - Add the ability to Enterprise Voice Enable a User with No PhoneNumber, PhoneNumberType, or LocationID set.
-#   -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
-#   -FEATURE - Add support for assigning Private Lines to Users.
-#   -FEATURE - Add the ability to auto-normalize US Numbers from 10 digits or 11-digits to proper E.164 format.
-#   -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
-#   -FEATURE - Provision Teams Rooms Accounts from CSV and Rebrand the script
-#   
-#--------------------------------
+<#
+Script Written By Eric Marsi | www.ericmarsi.com | https://www.ericmarsi.com/2023/01/27/microsoft-teams-user-account-provisioning-utility/
+
+ChangeLog-----------------------
+v2301.1
+   -Initial Release
+
+v2302.1
+   -CHANGE - Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
+   -FEATURE - Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
+    -Supported Values are DirectRouting, CallingPlan, and OperatorConnect
+   -FEATURE - Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
+   -FEATURE - Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
+
+v2310.1_BETA
+   -BUG - Updated misc script descriptors and other text objects for accuracy
+   -CHANGE - Script Minimum Teams PS Module updated to 5.7.1 from 4.9.3
+   -FEATURE - Added support for LocationID in Set-CsPhoneNumberAssignment. This field is optional for DR, required for CP/OC,and requires a new Template CSV
+   -FEATURE - Added support for assigning Caller ID Policies (CallingLineIdentity) to users
+
+v2405.1
+   -CHANGE - Script Minimum Teams PS Module updated to 6.1.0 from 5.7.1
+
+v2408.1
+   -BUG - Fixed Issue with Disconnect Teams PS Function not updating main menu
+   -CHANGE - Script Renamed from "Microsoft Teams User Account Provisioning Utility" to "MS Teams Account Provisioning Utility"
+   -CHANGE - Script Minimum Teams PS Module updated to 6.4.0 from 6.1.0
+   -CHANGE - Reorganized the order of policy assignment to be alphabetical based on PowerShell cmdlet
+   -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
+   -FEATURE - Added support to assign a Call Park, Calling Policy, Voice Application Policy, Voicemail Policy, Shared Calling Policy, and/or a IP Phone Policy to a user
+    -Supported Policies: CsCallingLineIdentity, CsOnlineAudioConferencingRoutingPolicy, CsOnlineVoicemailPolicy, CsOnlineVoiceRoutingPolicy, CsTeamsCallingPolicy, CsTeamsCallParkPolicy, CsTeamsEmergencyCallingPolicy, CsTeamsEmergencyCallRoutingPolicy, CsTeamsIPPhonePolicy, CsTeamsSharedCallingRoutingPolicy, CsTeamsVoiceApplicationsPolicy, and CsTenantDialPlan
+
+v2408.2
+   -CHANGE - Script Minimum Teams PS Module updated to 6.5.0 from 6.4.0
+   -CHANGE - Script Renamed from "MS Teams Account Provisioning Utility" to "MS Teams Toolbox"
+   -Change - Change the Script Updater to get the name of largest file in the latest release. This allows for freedom renaming the tool in future releases
+    -A Delta updater was released with the old script filename. This allows for all old versions of the script to auto-update going forward.
+   -CHANGE - Optimized Provsioning Functions with a new EM-PolicyAssignment function
+   -CHANGE - StatusFlag Bits are now set on user enablement for error checking. To be made granular in future feature enhancements
+   -CHANGE - General Code Optimizations & code preparation for upcoming features with Exchange Online
+   -CHANGE - Cleaned up the script to have a sub function for policy assignement. Makes adding new policies in the future easier and minifies the script.
+   -FEATURE - Added a $Script:ConsoleDebugEnable flag to the code header that is enabled by default. This shows or hides the skipped policies and items when provisioning users. Items are still written to log.
+   -FEATURE - Added the ability to switch clouds from Commercial Cloud to GCCH, DOD, and China
+   -FEATURE - Added the ability to set a tenant id from a customer's verified domain name or a static tenant id. This is used to connect to the tenant as a guest user from another tenant or as a Microsoft Partner
+   -FEATURE - Added support for assigning Private Lines to Users
+   -FEATURE - Added support for assigning the Survivable Branch Policy (CsTeamsSurvivableBranchAppliancePolicy) to a user
+   -FEATURE - Added the ability to Enterprise Voice Enable a User with No PhoneNumber, PrivateLineNumber, PhoneNumberType, or LocationID set.
+   -FEATURE - Added the ability to auto-normalize Numbers not stating with a + to hopefully E.164 format - Format is not validated to be proper e.164 to prevent issues
+   -FEATURE - Added Support for Importing Excel User Files for all options. This allows users to edit the user data in Excel form and then use it directly in the script
+    -Had to fix a bug under PhoneNumber and PrivateLineNumber Assignment that acted different due to the import-excel function in LocationID
+
+
+**Future Release Things to Add/Change/Fix**
+   -BUG - Not Working on a Mac - IsAdmin and File Import Dialog - Have to migrate to PS 7.2 to support this
+   -CHANGE - Update Script to Require PowerShell 7.2 for all functions due to Teams PS Module 6.3.0 now supporting the newer release.
+   -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
+   -FEATURE - Rewrite line uri assignment/EV Enable under a sub functon (EM-SetCsUserPhoneNumberAssignment)
+   -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
+   -FEATURE - Provision Teams Rooms Accounts from CSV and Rebrand the script
+#>
 
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
-    $Script:Name = "MS Teams Account Provisioning Utility By Eric Marsi"
-    $Script:BuildVersion = "2408.1"
-    $Script:BuildFlag = "RELEASE"
-    $Script:LogPath = "C:\_Logs\EM-MSTeamsUserAccountProvUtil\"
+    $Script:Name = "MS Teams Toolbox By Eric Marsi"
+    $Script:BuildVersion = "2408.2"
+    $Script:LogPath = "C:\_Logs\EM-MSTeamsToolbox\"
     $Script:LogFileName = "ScriptLog"
-    $Script:TeamsPSMinVer = "6.4.0"
+    $Script:TeamsPSMinVer = "6.5.0"
+    $Script:ImportExcelPSMinVer = "7.8.9"
+    $Script:ConsoleDebugEnable = $True #Variable to enable or disable showing skipped policy assignments in the console log
     $Script:ScriptUpdaterEnabled = $True #Variable to enable or disable the Script GitHub Updater function.
-    $Script:ScriptUpdaterGithubRepo = "EricMarsi/MicrosoftTeamsUserAccountProvisioningUtility"
-    $Script:ScriptUpdaterGithubScriptName = "Microsoft.Teams.User.Account.Provisioning.Utility.ps1"
+    $Script:ScriptUpdaterGithubRepo = "EricMarsi/MS-Teams-Toolbox"
+    #Dont Change:
+    $Script:M365EnvironmentNameID = "Commercial Cloud (CC) & Government Cloud (GCC)"
+    $Script:TeamsEnvironmentNameID = "TeamsCC-GCC"
+    $Script:ExchangeEnvironmentNameID = "O365Default"
     $Script:TeamsSession = $False
     $Script:BetaFlightsEnabled = $False #Variable to Enable Beta Features, Do not change here, activate with activation code from main menu
-    $Script:TeamsConnection = "<Not Set>"
-    $Script:TenantDomain = "<Not Set>"
-    $Script:TenantID = "<Not Set>"
-    $Script:M365Admin = "<Not Set>"
+    $Script:ReqTenantID = "<Not Specified>"
+    $Script:ReqTenantDomain = "<Not Specified>"
+    $Script:TenantDomain = "<Not Connected>"
+    $Script:TenantID = "<Not Connected>"
+    $Script:M365Admin = "<Not Connected>"
 
 Clear-Host
 $DT = Get-Date -Format "MM/dd/yyyy HH:mm:ss:ffff"
@@ -133,8 +154,9 @@ Write-Log -Severity Info -Message "Verifying that at least PowerShell 5.1 is Ins
         Write-Error "The host must be upgraded to at least PowerShell 5.1! Please Refer to: https://www.ericmarsi.com/2021/02/27/installing-the-microsoft-teams-powershell-module/" -ErrorAction Stop
     }else {
         Write-Log -Severity Info -Message "Pass: At Least PowerShell 5.1 is Installed"
-        Write-Host "Pass: The host has at least PowerShell 5.1 Installed`n" -ForegroundColor Green
+        Write-Host "Pass: The host has at least PowerShell 5.1 Installed" -ForegroundColor Green
     }
+Write-Host "***NOTE: This is the last version of this script that will continue to run on PowerShell 5.1. This script WILL require 7.2 in future updates!***`n" -ForegroundColor Yellow
 
 #Verify that the script is executing in the PowerShell Console and not the ISE
 Write-Host "Verifying that the script is executing in the PowerShell Console and not the ISE"
@@ -193,10 +215,24 @@ function EM-GetLatestGitHubRelease
                                             {
                                                 $DownloadPath = "C:\"
                                             }
-
-                                        $ScriptDownloadURL = "https://github.com/$($Script:ScriptUpdaterGithubRepo)/releases/download/$($ServerVersion)/$($Script:ScriptUpdaterGithubScriptName)"                                        
-                                        $TargetScriptName = $Script:ScriptUpdaterGithubScriptName.Replace('.',' ')
-                                        $TargetScriptName = $TargetScriptName.Replace(' ps1','.ps1')
+										
+										#Get Largest File that is a .ps1 file from the latest release
+										$GHAssets = (Invoke-WebRequest $ReleasesURL -ErrorAction Stop | ConvertFrom-Json)[0].assets
+										[System.Collections.ArrayList]$GHValues = @()
+										foreach ($File in $GHAssets)
+											{
+												if ($File.Name -match "^*.ps1$")
+													{
+														$GHValuesOut = New-Object PSCustomObject
+														$GHValuesOut | Add-Member -NotePropertyName Name -NotePropertyValue $File.Name
+														$GHValuesOut | Add-Member -NotePropertyName Size -NotePropertyValue $File.Size
+														$GHValuesOut | Add-Member -NotePropertyName DownloadURL -NotePropertyValue $File.browser_download_url
+														$GHValues += $GHValuesOut
+													}
+											}
+										#Parse URL and Filename
+										$ScriptDownloadURL = ($GHValues | Sort-Object -Property Size -Descending | Select-Object -First 1).DownloadURL
+                                        $TargetScriptName = ($GHValues | Sort-Object -Property Size -Descending | Select-Object -First 1).Name
                                         $NewScriptPath = "$($DownloadPath)$($TargetScriptName)"
                                         
                                         try
@@ -303,77 +339,70 @@ function EM-ValidatePSModule {
 
 #Verify that the Required PowerShell Modules are installed. If not installed, attempt to install or update
 EM-ValidatePSModule -DisplayName "Teams" -ModuleName "MicrosoftTeams" -MinimumVersion $($Script:TeamsPSMinVer)
+EM-ValidatePSModule -DisplayName "Import-Excel" -ModuleName "ImportExcel" -MinimumVersion $($Script:ImportExcelPSMinVer) #Special Thanks to @DougCharlesFinke
+Import-Module ImportExcel
 
 pause
 
-#ScriptFunctions--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-function EM-MainMenu
-    {
-        clear-host
-        Write-Log -Severity Info -Message "Presenting the User Main Menu Options"
-        Write-Host "$($Script:Name) v$($Script:BuildVersion)`n"
-        Write-Host "Environment Information---------------------------------------------------------------------------"
-        Write-Host "Tenant Domain                 : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:TenantDomain)" -ForegroundColor Yellow
-        Write-Host "Tenant ID                     : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:TenantID)" -ForegroundColor Yellow
-        Write-Host "M365 Admin Credentials        : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:M365Admin)" -ForegroundColor Yellow
-        Write-Host "Teams PS Session Active?      : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:TeamsSession)" -ForegroundColor Yellow
-        Write-Host "Beta Flights Enabled          : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:BetaFlightsEnabled)" -ForegroundColor Yellow
-        Write-Host "Script GitHub Updater Enabled : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:ScriptUpdaterEnabled)" -ForegroundColor Yellow
-        Write-Host "Script Log File Path          : "-ForegroundColor Green -NoNewLine
-        Write-Host "$($Script:LogFilePath)`n" -ForegroundColor Yellow
-        Write-Host "Admin Connections (Required)----------------------------------------------------------------------"
-        Write-Host "Option 1: Setup Admin Connections" -ForegroundColor Green
-        Write-Host "Option 2: Close all Admin Connections`n" -ForegroundColor Green
-        Write-Host "Script Modes--------------------------------------------------------------------------------------"
-        Write-Host "Option 10: Deprecated" -ForegroundColor Green
-        Write-Host "Option 11: Provision Multiple User Accounts (CSV Import)" -ForegroundColor Green
-        Write-Host "Option 12: Export User Calling Settings (CSV Import)" -ForegroundColor Green
-        if ($Script:BetaFlightsEnabled -eq $True)
-            {
-                Write-Host "Option 13: (Beta) Validate Teams Only Users for Readiness (CSV Import)`n" -ForegroundColor Green
-            }
-        else
-            {
-                Write-Host ""
-            }
-        Write-Host "Option 99: Terminate this Script`n"-ForegroundColor Red
-
-        #Write Current Environment Variables to the Log File
-        [string]$Script:EnvInfo = @()
-        $Script:EnvInfo += "Environment Information--------------------------------------------`n"
-        $Script:EnvInfo += "Tenant Domain : $($Script:TenantDomain)`n"
-        $Script:EnvInfo += "Tenant ID : $($Script:TenantID)`n"
-        $Script:EnvInfo += "M365 Admin Credentials : $($Script:M365Admin)`n"
-        $Script:EnvInfo += "Teams PS Session Active? : $($Script:TeamsSession)`n"
-        $Script:EnvInfo += "Beta Flights Enabled : $($Script:BetaFlightsEnabled)`n"
-        $Script:EnvInfo += "Script GitHub Updater Enabled : $($Script:ScriptUpdaterEnabled)`n"
-        $Script:EnvInfo += "Script Log File Path : $($Script:LogFilePath)"
-        Write-Log -Severity Info -Message $($Script:EnvInfo)
-    }
- 
+#ScriptFunctions-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
 function EM-ConnectTeamsPS
     {
+        [CmdletBinding()]
+        param(
+            [Parameter()]
+            [ValidateNotNullOrEmpty()]
+            [string]$TenantID,
+ 
+            [Parameter()]
+            [ValidateNotNullOrEmpty()]
+            [ValidateSet('TeamsCC-GCC','TeamsGCCH','TeamsDOD','TeamsChina')]
+            [string]$TeamsEnvironment  = 'TeamsCC-GCC'
+        )
+                
         Write-Log -Severity Info -Message "Running the EM-ConnectTeamsPS Function"
-            try{
+        try
+            {
                 Import-Module MicrosoftTeams
                 Write-Log -Severity Info -Message "Teams Module Imported"
-                $Script:TeamsConnection = Connect-MicrosoftTeams -ErrorAction Stop
-                Write-Log -Severity Info -Message "Connected to Microsoft Teams PowerShell"
-                $Script:TenantDomain = $(($Script:TeamsConnection).Account -split "@")[1]
-                $Script:M365Admin = $($Script:TeamsConnection).Account
-                $Script:TenantID = $($Script:TeamsConnection).TenantID
-                $Script:TeamsSession = $True
-            }catch{
-                Write-Log -Severity ERR -Message "An Unexpected Error occured! The exception caught was $_"
-                Write-Log -Severity ERR -Message "An Unexpected Error occured when Connecting to Microsoft Teams PowerShell!"
-                Write-Output "An Unexpected Error occured! The exception caught was $_"
-                Write-Error "An Unexpected Error occured when Connecting to Microsoft Teams PowerShell!" -ErrorAction Stop
+
+                if ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                    {
+                        $Script:TeamsConnection = Connect-MicrosoftTeams -ErrorAction Stop
+                    }
+                elseif ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -match "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+                    {
+                        $Script:TeamsConnection = Connect-MicrosoftTeams -TenantID $Script:ReqTenantID -ErrorAction Stop
+                    }
+                elseif ($Script:TeamsEnvironmentNameID -ne "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                    {
+                        $Script:TeamsConnection = Connect-MicrosoftTeams -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -ErrorAction Stop
+                    }
+                else #GCCH/DOD/China and Specific Tenant ID
+                    {
+                        $Script:TeamsConnection = Connect-MicrosoftTeams -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -TenantID $Script:ReqTenantID -ErrorAction Stop
+                    }
+                                
+                #Set Envrionment Information
+                try
+                    {
+                        $Script:TenantDomain = (Get-CsTenant -ErrorAction Stop).SipDomain[0]
+                        $Script:M365Admin = $($Script:TeamsConnection).Account
+                        $Script:TenantID = $($Script:TeamsConnection).TenantID
+                        $Script:TeamsSession = $True
+                        Write-Host "Successfully Connected to Microsoft Teams PowerShell`n" -ForegroundColor Green
+                        Write-Log -Severity Info -Message "Successfully Connected to Microsoft Teams PowerShell"
+                    }
+                catch
+                    {
+                        Write-Error "An error occured while trying to run Get-CsTenant. The Error was: $_`n" -ForegroundColor Red
+                        Write-Log -Severity ERR -Message "An error occured while trying to run Get-CsTenant. The Error was: $_"
+                        EM-DisconnectTeamsPS
+                    }
+            }
+        catch
+            {
+                Write-Log -Severity ERR -Message "An Unexpected Error occured when Connecting to Microsoft Teams PowerShell. The Error was: $_`n"
+                Write-Host "An Unexpected Error occured when Connecting to Microsoft Teams PowerShell. The Error was: $_" -ForegroundColor Red
             }
     }
 
@@ -384,13 +413,14 @@ function EM-DisconnectTeamsPS
             {
                 try{
                     Disconnect-MicrosoftTeams -ErrorAction Stop
+                    $Script:TenantDomain = "<Not Connected>"
+                    $Script:M365Admin = "<Not Connected>"
+                    $Script:TenantID = "<Not Connected>"
                     Write-Log -Severity Info -Message "Disconnected from Microsoft Teams PowerShell"
                     $Script:TeamsSession = $False
                 }catch{
-                    Write-Log -Severity ERR -Message "An Unexpected Error occured! The exception caught was $_"
-                    Write-Log -Severity ERR -Message "An Unexpected Error occured when disconnecting from Microsoft Teams PowerShell!"
-                    Write-Output "An Unexpected Error occured! The exception caught was $_"
-                    Write-Host "An Unexpected Error occured when disconnecting from Microsoft Teams PowerShell!" -ForegroundColor Red
+                    Write-Log -Severity ERR -Message "An Unexpected Error occured when Disconnecting from Microsoft Teams PowerShell. The Error was: $_"
+                    Write-Host "An Unexpected Error occured when Disconnecting from Microsoft Teams PowerShell. The Error was: $_" -ForegroundColor Red
                 }    
             }
         else
@@ -399,27 +429,78 @@ function EM-DisconnectTeamsPS
             }
     }
 
-function EM-GetUsersCsv
+function EM-GetDataFile
     {
-        Write-Log -Severity Info -Message "Running the EM-GetUsersCsv Function"
-        Write-Host "Please Select the CSV containing a list of users"
+        Write-Log -Severity Info -Message "Running the EM-GetDataFile Function"
+        Write-Host "Please Select the XLSX/XLS/CSV file you wish to import"
         Add-Type -AssemblyName System.Windows.Forms
         $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog
-        $FileBrowser.filter = "Csv (*.csv)| *.csv"
+        $FileBrowser.filter = "Excel or CSV Files (*.xlsx;*.xls;*.csv)|*.xlsx;*.xls;*.csv|All files (*.*)|*.*"
         [void]$FileBrowser.ShowDialog()
-            if ($FileBrowser.FileName -eq "")
-                {
-                    Write-Log -Severity ERR -Message "No CSV File Was Selected!"
-                    Write-Error "No CSV File Was Selected!" -ErrorAction Stop
-                }
-            else
-                {
-                    Write-Log -Severity Info -Message "Pass: CSV File Selected"
-                    Write-Host "Pass: CSV File Selected`n" -ForegroundColor Green
-                }
-            [System.Collections.ArrayList]$Script:Users = @(Import-Csv -Path $FileBrowser.FileName)
+		#Parse for XLSX and CSV
+			if (($FileBrowser.FileName -like "*.xlsx") -or ($FileBrowser.FileName -like "*.xls"))
+				{
+					Write-Log -Severity Info -Message "EM-GetDataFile - XLSX/XLS File Selected"
+                    Write-Host "XLSX/XLS File Selected`n" -ForegroundColor Green
+					Import-Excel -Path $FileBrowser.FileName
+				}
+			elseif ($FileBrowser.FileName -like "*.csv") 
+				{
+					Write-Log -Severity Info -Message "EM-GetDataFile - CSV File Selected"
+                    Write-Host "CSV File Selected`n" -ForegroundColor Green
+					Import-Csv -Path $FileBrowser.FileName
+				}
+			elseif ($FileBrowser.FileName -eq "") 
+				{
+					Write-Log -Severity Info "EM-GetDataFile - No XLSX/XLS/CSV File Was Selected"
+                    Write-Error "No XLSX/XLS/CSV File Was Selected!" -ErrorAction Stop
+				}
+			else
+				{
+					Write-Log -Severity Info "EM-GetDataFile - Invalid File Type Selected"
+                    Write-Error "Invalid File Type Selected!" -ErrorAction Stop
+				}
             $Script:CurrentUserCsvPath = $FileBrowser.FileName
             Write-Log -Severity Info "Current User CSV File Path Set to $($Script:CurrentUserCsvPath)"
+    }
+
+function EM-PolicyAssignment #Used Inside #EM-ProvisionUsers
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter()]
+            [ValidateNotNullOrEmpty()]
+            [string]$TeamsCmdlet,
+            [string]$TeamsCmdletDescription,
+            [string]$Identity,
+            [string]$PolicyName,
+            [string]$StatusFlagBit
+        )     
+        #Clear Input Attributes
+        $CMD = $null
+
+        if (($PolicyName-eq "") -or ($PolicyName -eq "null") -or ($PolicyName -eq $null) -or ($PolicyName -eq "N/A"))
+            {
+                if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Skipping the Assignment of the $($TeamsCmdletDescription) as the Value Provided is NULL" -ForegroundColor Yellow}
+                Write-Log -Severity Info -Message "Skipping the Assignment of the $($TeamsCmdletDescription) to $($Identity) as the Value Provided is NULL"  
+            }
+        else
+            {
+                try
+                    {
+                        $CMD = "Grant-$($TeamsCmdlet) -Identity $($Identity) -PolicyName $($PolicyName) -ErrorAction Stop"
+                        Invoke-Expression $CMD -ErrorAction Stop
+                        Write-Host "- Assigned the $($PolicyName) $($TeamsCmdletDescription) Successfully" -ForegroundColor Green
+                        Write-Log -Severity Info -Message "Assigned $($Identity) the $($PolicyName) $($TeamsCmdletDescription) Successfully"
+                    }
+                catch
+                    {
+                        Write-Host "- FAILED to Assign the $($PolicyName) $($TeamsCmdletDescription). The Error Was: $_" -ForegroundColor Red
+                        Write-Log -Severity ERR -Message "FAILED to Assign $($Identity) the $($PolicyName) $($TeamsCmdletDescription). The Error Was: $_"
+                        $Script:ErrorCommands += $CMD
+                        $Script:StatusFlags += $StatusFlagBit
+                    }
+            }
     }
 
 function EM-ProvisionUsers
@@ -427,6 +508,7 @@ function EM-ProvisionUsers
         Write-Log -Severity Info -Message "Running the EM-ProvisionUsers Function"
         Write-Host "Provisioning $($Script:Count) User(s) for Microsoft Teams Voice. Please Standby...`n"
         Write-Log -Severity Info -Message "Provisioning $($Script:Count) User(s) for Microsoft Teams Voice. Please Standby..."
+        $Script:ErrorCommands = $null
         [System.Collections.ArrayList]$Script:ErrorCommands = @()
 
         foreach ($User in $Script:Users)
@@ -435,353 +517,168 @@ function EM-ProvisionUsers
                 Write-Log -Severity Info -Message "-----------------------------------------------------------------------------------------------"
                 Write-Host "Provisioning $($User.UserPrincipalName) for Microsoft Teams Voice"
                 Write-Log -Severity Info -Message "Provisioning $($User.UserPrincipalName) for Microsoft Teams Voice"
+                
+                #Null Status Flags Inbetween Each User
+                $Script:StatusFlags = 0x0
+
+                #Parse PhoneNumber field to start with a +
+                    if ($User.PhoneNumber -match "^\+?(.*)")
+                        {
+                            $User.PhoneNumber | Select-String -pattern "^\+?(.*)" | foreach-object {$_.line -match "^\+?(.*)" > $nul}
+                            $UserPhoneNumberToAssign = "+$($matches[1])"
+                        }
+                    #Really don't know what the format is but still allow the script user to assign it ¯\_(ツ)_/¯
+                    else 
+                        {
+                            $UserPhoneNumberToAssign = $User.PhoneNumber
+                        }
 
                 #Assign a Phone Number to the User
                 if (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A") -or ($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A"))
                     {
-                        Write-Host "- Skipping the Assignment of a Phone Number as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow
+                        if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Skipping the Assignment of a Phone Number as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow}
                         Write-Log -Severity Info -Message "Skipping the Assignment of a Phone Number to $($User.UserPrincipalName) as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL"  
-                        $UserLineURISuccess = $True
                     }
                 else
                     {
                         try
                             {
-                                if ($User.LocationID -eq "")
+                                if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
                                     {
-                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $User.PhoneNumber -ErrorAction Stop
-                                        Write-Host "- Assigned the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
-                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
+                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPhoneNumberToAssign -ErrorAction Stop
+                                        Write-Host "- Assigned the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
+                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
                                     }
                                 else
                                     {
-                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $User.PhoneNumber -LocationID $User.LocationID -ErrorAction Stop
-                                        Write-Host "- Assigned the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
-                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully"
+                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPhoneNumberToAssign -LocationID $User.LocationID -ErrorAction Stop
+                                        Write-Host "- Assigned the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
+                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully"
                                     }
-                                $UserLineURISuccess = $True
                             }
                         catch
                             {
-                                if ($User.LocationID -eq "")
+                                if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
                                     {
-                                        Write-Host "- FAILED to Assign the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
-                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
-                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($User.PhoneNumber) -ErrorAction Stop"
+                                        Write-Host "- FAILED to Assign the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
+                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
+                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPhoneNumberToAssign) -ErrorAction Stop"
                                     }
                                 else
                                     {
-                                        Write-Host "- FAILED to Assign the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
-                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.PhoneNumber) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_"
-                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($User.PhoneNumber) -LocationID $($User.LocationID) -ErrorAction Stop"
+                                        Write-Host "- FAILED to Assign the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
+                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_"
+                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPhoneNumberToAssign) -LocationID $($User.LocationID) -ErrorAction Stop"
                                     }
-                                $UserLineURISuccess = $False
-                            }
-                    }
-
-                #Assign a CsCallingLineIdentity to the User
-                if (($User.CsCallingLineIdentity -eq "") -or ($User.CsCallingLineIdentity -eq "null") -or ($User.CsCallingLineIdentity -eq $null) -or ($User.CsCallingLineIdentity -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Caller ID Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Caller ID Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserCIDPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsCallingLineIdentity -Identity $User.UserPrincipalName -PolicyName $User.CsCallingLineIdentity -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsCallingLineIdentity) Caller ID Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsCallingLineIdentity) Caller ID Policy Successfully"
-                                $UserCIDPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsCallingLineIdentity) Caller ID Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsCallingLineIdentity) Caller ID Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsCallingLineIdentity -Identity $($User.UserPrincipalName) -PolicyName $($User.CsCallingLineIdentity) -ErrorAction Stop"
-                                $UserCIDPSuccess = $False
+                                $Script:StatusFlags += 0x1
                             }
                     }
                 
-                #Assign a CsOnlineAudioConferencingRoutingPolicy to the User
-                if (($User.CsOnlineAudioConferencingRoutingPolicy -eq "") -or ($User.CsOnlineAudioConferencingRoutingPolicy -eq "null") -or ($User.CsOnlineAudioConferencingRoutingPolicy -eq $null) -or ($User.CsOnlineAudioConferencingRoutingPolicy -eq "N/A"))
+                #Parse PrivateLineNumber field to start with a +
+                    if ($User.PrivateLineNumber -match "^\+?(.*)")
+                        {
+                            $User.PrivateLineNumber | Select-String -pattern "^\+?(.*)" | foreach-object {$_.line -match "^\+?(.*)" > $nul}
+                            $UserPrivateLineNumberToAssign = "+$($matches[1])"
+                        }
+                    #Really don't know what the format is but still allow the script user to assign it ¯\_(ツ)_/¯
+                    else 
+                        {
+                            $UserPrivateLineNumberToAssign = $User.PrivateLineNumber
+                        }
+
+
+                #Assign a Private Line to the User
+                if (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A") -or ($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A"))
                     {
-                        Write-Host "- Skipping the Assignment of a Online Audio Conferencing Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Online Audio Conferencing Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserOACRPSuccess = $True
+                        if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Skipping the Assignment of a Private Line as the Value Provided for PrivateLineNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow}
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Private Line to $($User.UserPrincipalName) as the Value Provided for PrivateLineNumber and/or PhoneNumberType is NULL"  
                     }
                 else
                     {
                         try
                             {
-                                Grant-CsOnlineAudioConferencingRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineAudioConferencingRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy Successfully"
-                                $UserOACRPSuccess = $True
+                                if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
+                                    {
+                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPrivateLineNumberToAssign -AssignmentCategory Private -ErrorAction Stop
+                                        Write-Host "- Assigned the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
+                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
+                                    }
+                                else
+                                    {
+                                        Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPrivateLineNumberToAssign -AssignmentCategory Private -LocationID $User.LocationID -ErrorAction Stop
+                                        Write-Host "- Assigned the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
+                                        Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully"
+                                    }
                             }
                         catch
                             {
-                                Write-Host "- FAILED to Assign the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsOnlineAudioConferencingRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsOnlineAudioConferencingRoutingPolicy) -ErrorAction Stop"
-                                $UserOACRPSuccess = $False
+                                if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
+                                    {
+                                        Write-Host "- FAILED to Assign the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
+                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
+                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPrivateLineNumberToAssign) -AssignmentCategory Private -ErrorAction Stop"
+                                    }
+                                else
+                                    {
+                                        Write-Host "- FAILED to Assign the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
+                                        Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_"
+                                        $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPrivateLineNumberToAssign) -AssignmentCategory Private -LocationID $($User.LocationID) -ErrorAction Stop"
+                                    }
+                                $Script:StatusFlags += 0x2
                             }
                     }
 
-                #Assign a CsOnlineVoicemailPolicyto the User
-                if (($User.CsOnlineVoicemailPolicy -eq "") -or ($User.CsOnlineVoicemailPolicy -eq "null") -or ($User.CsOnlineVoicemailPolicy -eq $null) -or ($User.CsOnlineVoicemailPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Voicemail Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Voicemail Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserVMPSuccess = $True
-                    }
-                else
+                #Enterprise Voice Enable Only a User - Used when a user only wants to be EV Enabled, but no DID assigned
+                if ((($User.EnterpriseVoiceEnabled -eq "True") -or ($User.EnterpriseVoiceEnabled -eq $True ) -or ($User.EnterpriseVoiceEnabled -eq "Yes")) -and (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A")) -and (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A")) -and (($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A")))
                     {
                         try
                             {
-                                Grant-CsOnlineVoicemailPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineVoicemailPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsOnlineVoicemailPolicy) Voicemail Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsOnlineVoicemailPolicy) Voicemail Policy Successfully"
-                                $UserVMPSuccess = $True
+                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -EnterpriseVoiceEnabled $True -ErrorAction Stop
+                                Write-Host "- Set EnterpriseVoiceEnabled to TRUE Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Set EnterpriseVoiceEnabled to TRUE for $($User.UserPrincipalName) Successfully"
                             }
                         catch
                             {
-                                Write-Host "- FAILED to Assign the $($User.CsOnlineVoicemailPolicy) Voicemail Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsOnlineVoicemailPolicy) Voicemail Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsOnlineVoicemailPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsOnlineVoicemailPolicy) -ErrorAction Stop"
-                                $UserVMPSuccess = $False
+                                Write-Host "- FAILED to set EnterpriseVoiceEnabled to TRUE. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to set EnterpriseVoiceEnabled to TRUE for $($User.UserPrincipalName). The Error Was: $_"
+                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -EnterpriseVoiceEnabled $True -ErrorAction Stop"
+                                $Script:StatusFlags += 0x4
                             }
+                    }
+                #User has an assigned DID to either PhoneNumber or PrivateLineNumber and it provisioned successfully. If not successful, follow else statement
+                elseif (($Script:StatusFlags -eq 0x0) -and (($User.PhoneNumber -ne "" ) -or ($User.PrivateLineNumber -ne "")) -and (($Script:User.EnterpriseVoiceEnabled -eq "TRUE") -or ($Script:User.EnterpriseVoiceEnabled -eq $True)))
+                    {
+                            Write-Host "- Set EnterpriseVoiceEnabled to TRUE Successfully" -ForegroundColor Green
+                            Write-Log -Severity Info -Message "Set EnterpriseVoiceEnabled to TRUE for $($User.UserPrincipalName) Successfully"
+                    }
+                #EVDisable Code - Not adding in to the codebase, but keeping here for reference as you should use the mass-disable mode
+                #elseif ((($User.EnterpriseVoiceEnabled -eq "False") -or ($User.EnterpriseVoiceEnabled -eq $False ) -or ($User.EnterpriseVoiceEnabled -eq "No")) -and (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A")) -and (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A")) -and (($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A")))
+                else
+                    {
+
+                        if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Skipping Enterprise Voice ONLY Enablement as either EnterpriseVoiceEnabled is not TRUE and/or PhoneNumber/Type fields are not NULL." -ForegroundColor Yellow}
+                        Write-Log -Severity Info -Message "Skipping the Enterprise Voice ONLY Enablement of $($User.UserPrincipalName) as either EnterpriseVoiceEnabled is not TRUE and/or PhoneNumber, PrivateLineNumber, and/or PhoneNumberType is not NULL."  
                     }
 
-                #Assign a CsOnlineVoiceRoutingPolicy to the User
-                if (($User.CsOnlineVoiceRoutingPolicy -eq "") -or ($User.CsOnlineVoiceRoutingPolicy -eq "null") -or ($User.CsOnlineVoiceRoutingPolicy -eq $null) -or ($User.CsOnlineVoiceRoutingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Online Voice Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Online Voice Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserOVRPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsOnlineVoiceRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineVoiceRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsOnlineVoiceRoutingPolicy) Online Voice Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsOnlineVoiceRoutingPolicy) Voice Routing Policy Successfully"
-                                $UserOVRPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsOnlineVoiceRoutingPolicy) Voice Routing Policy. The Error Was $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsOnlineVoiceRoutingPolicy) Voice Routing Policy. The Error Was $_"
-                                $Script:ErrorCommands += "Grant-CsOnlineVoiceRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsOnlineVoiceRoutingPolicy) -ErrorAction Stop"
-                                $UserOVRPSuccess = $False
-                            }
-                    }
+                #Policy Assignment
+                EM-PolicyAssignment -TeamsCmdlet "CsCallingLineIdentity" -TeamsCmdletDescription "Caller ID Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsCallingLineIdentity -StatusFlagBit 0x8
+                EM-PolicyAssignment -TeamsCmdlet "CsOnlineAudioConferencingRoutingPolicy" -TeamsCmdletDescription "Audio Conferencing Routing Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineAudioConferencingRoutingPolicy -StatusFlagBit 0x10
+                EM-PolicyAssignment -TeamsCmdlet "CsOnlineVoicemailPolicy" -TeamsCmdletDescription "Voicemail Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineVoicemailPolicy -StatusFlagBit 0x20
+                EM-PolicyAssignment -TeamsCmdlet "CsOnlineVoiceRoutingPolicy" -TeamsCmdletDescription "Online Voice Routing Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineVoiceRoutingPolicy -StatusFlagBit 0x40
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsCallingPolicy" -TeamsCmdletDescription "Calling Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsCallingPolicy -StatusFlagBit 0x80
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsCallParkPolicy" -TeamsCmdletDescription "Call Park Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsCallParkPolicy -StatusFlagBit 0x100
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsEmergencyCallingPolicy" -TeamsCmdletDescription "Emergency Calling Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsEmergencyCallingPolicy -StatusFlagBit 0x200
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsEmergencyCallRoutingPolicy" -TeamsCmdletDescription "Emergency Call Routing Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsEmergencyCallRoutingPolicy -StatusFlagBit 0x400
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsIPPhonePolicy" -TeamsCmdletDescription "IP Phone Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsIPPhonePolicy -StatusFlagBit 0x800
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsSharedCallingRoutingPolicy" -TeamsCmdletDescription "Shared Calling Routing Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsSharedCallingRoutingPolicy -StatusFlagBit 0x1000
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsSurvivableBranchAppliancePolicy" -TeamsCmdletDescription "Survivable Branch Appliance Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsSurvivableBranchAppliancePolicy -StatusFlagBit 0x2000
+                EM-PolicyAssignment -TeamsCmdlet "CsTeamsVoiceApplicationsPolicy" -TeamsCmdletDescription "Voice Applications Policy" -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsVoiceApplicationsPolicy -StatusFlagBit 0x4000
+                EM-PolicyAssignment -TeamsCmdlet "CsTenantDialPlan" -TeamsCmdletDescription "Tenant Dial Plan" -Identity $User.UserPrincipalName -PolicyName $User.CsTenantDialPlan -StatusFlagBit 0x8000
 
-                 #Assign a CsTeamsCallingPolicy to the User
-                if (($User.CsTeamsCallingPolicy -eq "") -or ($User.CsTeamsCallingPolicy -eq "null") -or ($User.CsTeamsCallingPolicy -eq $null) -or ($User.CsTeamsCallingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Calling Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Calling Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserCPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsCallingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsCallingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsCallingPolicy) Calling Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsCallingPolicy) Calling Policy Successfully"
-                                $UserCPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsCallingPolicy) Calling Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsCallingPolicy) Calling Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsCallingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsCallingPolicy) -ErrorAction Stop"
-                                $UserCPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTeamsCallParkPolicy to the User
-                if (($User.CsTeamsCallParkPolicy -eq "") -or ($User.CsTeamsCallParkPolicy -eq "null") -or ($User.CsTeamsCallParkPolicy -eq $null) -or ($User.CsTeamsCallParkPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Call Park Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Call Park Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserCPPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsCallParkPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsCallParkPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsCallParkPolicy) Call Park Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsCallParkPolicy) Call Park Policy Successfully"
-                                $UserCPPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsCallParkPolicy) Call Park Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsCallParkPolicy) Call Park Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsCallParkPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsCallParkPolicy) -ErrorAction Stop"
-                                $UserCPPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTeamsEmergencyCallingPolicy to the User
-                if (($User.CsTeamsEmergencyCallingPolicy -eq "") -or ($User.CsTeamsEmergencyCallingPolicy -eq "null") -or ($User.CsTeamsEmergencyCallingPolicy -eq $null) -or ($User.CsTeamsEmergencyCallingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Emergency Calling Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Emergency Calling Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserECPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsEmergencyCallingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsEmergencyCallingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy Successfully"
-                                $UserECPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsEmergencyCallingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsEmergencyCallingPolicy) -ErrorAction Stop"
-                                $UserECPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTeamsEmergencyCallRoutingPolicy to the User
-                if (($User.CsTeamsEmergencyCallRoutingPolicy -eq "") -or ($User.CsTeamsEmergencyCallRoutingPolicy -eq "null") -or ($User.CsTeamsEmergencyCallRoutingPolicy -eq $null) -or ($User.CsTeamsEmergencyCallRoutingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Emergency Call Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Emergency Call Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserECRPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsEmergencyCallRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsEmergencyCallRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy Successfully"
-                                $UserECRPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsEmergencyCallRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsEmergencyCallRoutingPolicy) -ErrorAction Stop"
-                                $UserECRPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTeamsIPPhonePolicy to the User
-                if (($User.CsTeamsIPPhonePolicy -eq "") -or ($User.CsTeamsIPPhonePolicy -eq "null") -or ($User.CsTeamsIPPhonePolicy -eq $null) -or ($User.CsTeamsIPPhonePolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a IP Phone Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a IP Phone Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserIPPPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsIPPhonePolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsIPPhonePolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsIPPhonePolicy) IP Phone Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsIPPhonePolicy) IP Phone Policy Successfully"
-                                $UserIPPPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsIPPhonePolicy) IP Phone Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsIPPhonePolicy) IP Phone Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsIPPhonePolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsIPPhonePolicy) -ErrorAction Stop"
-                                $UserIPPPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTeamsSharedCallingRoutingPolicy to the User
-                if (($User.CsTeamsSharedCallingRoutingPolicy -eq "") -or ($User.CsTeamsSharedCallingRoutingPolicy -eq "null") -or ($User.CsTeamsSharedCallingRoutingPolicy -eq $null) -or ($User.CsTeamsSharedCallingRoutingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Shared Calling Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Shared Calling Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserSCRPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsSharedCallingRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsSharedCallingRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy Successfully"
-                                $UserSCRPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsSharedCallingRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsSharedCallingRoutingPolicy) -ErrorAction Stop"
-                                $UserSCRPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTeamsVoiceApplicationsPolicy to the User
-                if (($User.CsTeamsVoiceApplicationsPolicy -eq "") -or ($User.CsTeamsVoiceApplicationsPolicy -eq "null") -or ($User.CsTeamsVoiceApplicationsPolicy -eq $null) -or ($User.CsTeamsVoiceApplicationsPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Voice Applications Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Voice Applications Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserVAPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsVoiceApplicationsPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsVoiceApplicationsPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy Successfully"
-                                $UserVAPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsVoiceApplicationsPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsVoiceApplicationsPolicy) -ErrorAction Stop"
-                                $UserVAPSuccess = $False
-                            }
-                    }
-
-                #Assign a CsTenantDialPlan to the User
-                if (($User.CsTenantDialPlan -eq "") -or ($User.CsTenantDialPlan -eq "null") -or ($User.CsTenantDialPlan -eq $null) -or ($User.CsTenantDialPlan -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Tenant Dial Plan as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Tenant Dial Plan to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserDPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTenantDialPlan -Identity $User.UserPrincipalName -PolicyName $User.CsTenantDialPlan -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CsTenantDialPlan) Dial Plan Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTenantDialPlan) Dial Plan Successfully"
-                                $UserDPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.CsTenantDialPlan) Dial Plan. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTenantDialPlan) Dial Plan. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTenantDialPlan -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTenantDialPlan) -ErrorAction Stop"
-                                $UserDPSuccess = $False
-                            }
-                    }
 
                 $Script:Count = $Script:Count - 1 #Decrease remaining users count by 1
 
-                if (($UserLineURISuccess -eq $True) -and ($UserOVRPSuccess -eq $True) -and ($UserOACRPSuccess -eq $True) -and ($UserDPSuccess -eq $True) -and ($UserECPSuccess -eq $True) -and ($UserECRPSuccess -eq $True) -and ($UserCIDPSuccess -eq $True) -and ($UserVMPSuccess -eq $True) -and ($UserCPPSuccess -eq $True) -and ($UserCPSuccess -eq $True) -and ($UserVAPSuccess -eq $True) -and ($UserSCRPSuccess -eq $True) -and ($UserIPPPSuccess -eq $True))
+                if ($StatusFlags -eq 0x0)
                     {
                         Write-Host ""
                         Write-Host "Provisioned $($User.UserPrincipalName) Successfully! $($Script:Count) of $($Script:CountInitial) User(s) Remain...`n" -ForegroundColor Green
@@ -794,6 +691,54 @@ function EM-ProvisionUsers
                         Write-Log -Severity Info -Message "One or More Errors Caused Provisioning to Fail for $($User.UserPrincipalName). $($Script:Count) of $($Script:CountInitial) User(s) Remain..."
                     }
                 
+            }
+    }
+
+    function EM-RemoveAllCsPhoneNumberAssignments
+    {
+        Write-Log -Severity Info -Message "Running the EM-RemoveAllCsPhoneNumberAssignments Function"
+        Write-Host "Removing ALL Phone Numbers from $($Script:Count) Microsoft Teams Voice User(s). Please Standby...`n"
+        Write-Log -Severity Info -Message "Removing ALL Phone Numbers from $($Script:Count) Microsoft Teams Voice User(s). Please Standby..."
+        $Script:ErrorCommands = $null
+        [System.Collections.ArrayList]$Script:ErrorCommands = @()
+
+        foreach ($User in $Script:Users)
+            {
+                Write-Host "-----------------------------------------------------------------------------------------------"
+                Write-Log -Severity Info -Message "-----------------------------------------------------------------------------------------------"
+                Write-Host "Attempting to Remove ALL Phone Number(s) from $($User.UserPrincipalName)"
+                Write-Log -Severity Info -Message "Attempting to Remove ALL Phone Number(s) from $($User.UserPrincipalName)"
+                
+                #Null Status Flags Inbetween Each User
+                $Script:StatusFlags = 0x0
+
+                #Enterprise Voice Enable Only a User - Used when a user only wants to be EV Enabled, but no DID assigned
+                try
+					{
+						Remove-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -RemoveAll -ErrorAction Stop
+						Write-Host "- Successfully Removed ALL Phone Number(s) Assigned" -ForegroundColor Green
+						Write-Log -Severity Info -Message "Successfully Removed ALL Phone Number(s) Assigned to $($User.UserPrincipalName)"
+					}
+				catch
+					{
+						Write-Host "- FAILED to Remove ALL Phone Number(s) Assigned. The Error Was: $_" -ForegroundColor Red
+						Write-Log -Severity ERR -Message "FAILED to Remove ALL Phone Number(s) Assigned to $($User.UserPrincipalName). The Error Was: $_"
+						$Script:ErrorCommands += "Remove-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -RemoveAll -ErrorAction Stop"
+						$Script:StatusFlags += 0x1
+					}
+
+                if ($StatusFlags -eq 0x0)
+                    {
+                        Write-Host ""
+                        Write-Host "Provisioned $($User.UserPrincipalName) Successfully! $($Script:Count) of $($Script:CountInitial) User(s) Remain...`n" -ForegroundColor Green
+                        Write-Log -Severity Info -Message "Provisioned $($User.UserPrincipalName) Successfully! $($Script:Count) of $($Script:CountInitial) User(s) Remain..."
+                    }
+                else
+                    {
+                        Write-Host ""
+                        Write-Host "One or More Errors Caused Provisioning to Fail for $($User.UserPrincipalName). $($Script:Count) of $($Script:CountInitial) User(s) Remain...`n" -ForegroundColor Red
+                        Write-Log -Severity Info -Message "One or More Errors Caused Provisioning to Fail for $($User.UserPrincipalName). $($Script:Count) of $($Script:CountInitial) User(s) Remain..."
+                    }
             }
     }
 
@@ -831,6 +776,90 @@ function EM-RetryProvisioningErrors
                     }
             }
     }
+function Get-TenantID
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory)]
+        [String]$Domain
+    )
+
+    try {
+            (Invoke-WebRequest https://login.windows.net/$($Domain)/.well-known/openid-configuration|ConvertFrom-Json).token_endpoint.Split('/')[3]
+        }
+    catch
+        {
+            Write-Error "Failed to get the Tenant ID. The exception caught was $_" -ErrorAction Stop
+        }
+}
+
+function EM-MainMenu
+    {
+        clear-host
+        Write-Log -Severity Info -Message "Presenting the User Main Menu Options"
+        Write-Host "$($Script:Name) v$($Script:BuildVersion)`n"
+        Write-Host "Environment Information---------------------------------------------------------------------------"
+        Write-Host "Microsoft 365 Environment     : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:M365EnvironmentNameID)" -ForegroundColor Yellow
+        Write-Host "Requested Tenant Domain       : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:ReqTenantDomain)" -ForegroundColor Yellow
+        Write-Host "Requested Tenant ID           : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:ReqTenantID)" -ForegroundColor Yellow
+        Write-Host "Connected Tenant Domain       : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:TenantDomain)" -ForegroundColor Yellow
+        Write-Host "Connected Tenant ID           : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:TenantID)" -ForegroundColor Yellow
+        Write-Host "M365 Admin Credentials        : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:M365Admin)" -ForegroundColor Yellow
+        Write-Host "Teams PS Session Active?      : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:TeamsSession)" -ForegroundColor Yellow
+        Write-Host "Beta Flights Enabled          : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:BetaFlightsEnabled)" -ForegroundColor Yellow
+        Write-Host "Script Console Debug Enabled  : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:ConsoleDebugEnable)" -ForegroundColor Yellow
+        Write-Host "Script GitHub Updater Enabled : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:ScriptUpdaterEnabled)" -ForegroundColor Yellow
+        Write-Host "Script Log File Path          : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:LogFilePath)`n`n" -ForegroundColor Yellow
+        Write-Host "Admin Connections---------------------------------------------------------------------------------"
+        Write-Host " Option 1: Required - Connect to Teams PowerShell" -ForegroundColor Green
+        Write-Host " Option 2: Optional - Connect to Exchange PowerShell (Required only for Rooms)" -ForegroundColor Green
+        Write-Host " Option 3: Optional - Specify Tenant ID (Guest Access & Microsoft Partners)" -ForegroundColor Green
+        Write-Host " Option 4: Optional - Change Microsoft 365 Cloud Environments" -ForegroundColor Green
+        Write-Host " Option 9: Disconnect All Admin Connections`n" -ForegroundColor Green
+
+        Write-Host "Script Modes--------------------------------------------------------------------------------------"
+        Write-Host " Option 10: Deprecated" -ForegroundColor Green
+        Write-Host " Option 11: Provision Multiple User Accounts (XLSX & CSV Import)" -ForegroundColor Green
+        Write-Host " Option 12: Bulk Remove ALL CsPhoneNumberAssignments from Users (XLSX & CSV Import)" -ForegroundColor Green
+        Write-Host " Option 13: Export User Calling Settings (CSV Import ONLY)" -ForegroundColor Green
+        if ($Script:BetaFlightsEnabled -eq $True)
+            {
+                Write-Host " Option 14: (Beta) Validate Teams Only Users for Readiness (XLSX & CSV Import)`n" -ForegroundColor Green
+            }
+        else
+            {
+                Write-Host ""
+            }
+        Write-Host "Option 99: Terminate this Script`n"-ForegroundColor Red
+
+        #Write Current Environment Variables to the Log File
+        [string]$Script:EnvInfo = @()
+        $Script:EnvInfo += "Environment Information--------------------------------------------`n"
+        $Script:EnvInfo += "Microsoft 365 Environment : $($Script:M365EnvironmentNameID)`n"
+        $Script:EnvInfo += "Requested Tenant Domain : $($Script:ReqTenantDomain)`n"
+        $Script:EnvInfo += "Requested Tenant ID : $($Script:ReqTenantID)`n"
+        $Script:EnvInfo += "Connected Tenant Domain : $($Script:TenantDomain)`n"
+        $Script:EnvInfo += "Connected Tenant ID : $($Script:TenantID)`n"
+        $Script:EnvInfo += "M365 Admin Credentials : $($Script:M365Admin)`n"
+        $Script:EnvInfo += "Teams PS Session Active? : $($Script:TeamsSession)`n"
+        $Script:EnvInfo += "Script Beta Flights Enabled : $($Script:BetaFlightsEnabled)`n"
+        $Script:EnvInfo += "Script Console Debug Enabled : $($Script:ConsoleDebugEnable)`n"
+        $Script:EnvInfo += "Script GitHub Updater Enabled : $($Script:ScriptUpdaterEnabled)`n"
+        $Script:EnvInfo += "Script Log File Path : $($Script:LogFilePath)"
+        Write-Log -Severity Info -Message $($Script:EnvInfo)
+    }
 
 #Main Menu--------------------------------------------------------------------------------------------------------------------------------------------
 do{
@@ -840,41 +869,161 @@ do{
 
 if ($Confirm1 -eq "1")
     {
-        Write-Host "Option 1: Setup Admin Connections Selected. Setting Up Connections..."
-        Write-Log -Severity Info -Message "Option 1: Setup Admin Connections Selected. Setting Up Connections..."
-        Write-Host "Connecting to Microsoft Teams PowerShell"
+        Write-Host "Option 1: Required - Connect to Teams PowerShell Selected. Setting Up Connections...`n"
+        Write-Log -Severity Info -Message "Option 1: Required - Connect to Teams PowerShell Selected. Setting Up Connections..."
+        Write-Host "Connecting to Microsoft Teams PowerShell`n"
         EM-ConnectTeamsPS
-        Write-Log -Severity Info -Message "Option 1: Setup Admin Connections Complete, Returning to the Main Menu"
+        pause
+        Write-Log -Severity Info -Message "Option 1: Required - Connect to Teams PowerShell Complete, Returning to the Main Menu"
     }
 
 elseif ($Confirm1 -eq "2")
     {
-        Write-Host "Option 2: Close all Admin Connections Selected. Closing Connections..."
-        Write-Log -Severity Info -Message "Option 2: Close all Admin Connections Selected. Closing Connections..."
+        Write-Host "Option 2: Optional - Connect to Exchange PowerShell (Required only for Rooms) Selected. Setting Up Connections...`n"
+        Write-Log -Severity Info -Message "Option 2: Optional - Connect to Exchange PowerShell (Required only for Rooms) Selected. Setting Up Connections..."
+        Write-Host "Connecting to Microsoft Exchange PowerShell`n"
+        Write-Host "Feature Coming Soon -EM"
+        ########
+        pause
+        Write-Log -Severity Info -Message "Option 2: Optional - Connect to Exchange PowerShell (Required only for Rooms) Complete, Returning to the Main Menu"
+    }
+
+elseif ($Confirm1 -eq "3")
+    {
+        Write-Host "Option 3: Optional - Specify Tenant ID (Guest Access & Microsoft Partners)`n"
+        Write-Log -Severity Info -Message "Option 3: Optional - Specify Tenant ID (Guest Access & Microsoft Partners)"
+        Write-Host "Please specify a Tenant ID or a verified domain in the Microsoft 365 Tenant that you are wanting to"
+        Write-Host "connect to, else leave this field blank to reset to connection defaults`n"
+        $Script:ReqTenantDomain = Read-Host "Tenant ID or Domain"
+        if ($Script:ReqTenantDomain -eq "")
+            {
+                $Script:ReqTenantID = "<Not Specified>"
+                $Script:ReqTenantDomain = "<Not Specified>"
+                Write-Host ""
+                Write-Host "Set the Requested Tenant ID and Requested Tenant Domain to Defaults`n" -ForegroundColor Green
+            }
+        elseif ($Script:ReqTenantDomain -match "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+            {
+                #Static Assignment with an already known tenant ID
+                $Script:ReqTenantID = $Script:ReqTenantDomain
+                $Script:ReqTenantDomain = "<Not Specified>"
+                Write-Host ""
+                Write-Host "User Provided a Tenant ID of $($Script:ReqTenantID)`n" -ForegroundColor Green
+            }
+        else
+            {
+                
+                try
+                    {
+                        $Script:ReqTenantID = Get-TenantID -Domain $Script:ReqTenantDomain -ErrorAction Stop
+                        Write-Host ""
+                        Write-Host "Retrived the Tenant ID of $($Script:ReqTenantID) for $($Script:ReqTenantDomain)`n" -ForegroundColor Green
+                    }
+                catch
+                    {
+                        Write-Host "FAILED to retrieve the Tenant ID for $($Script:ReqTenantDomain). The Error was $_`n" -ForegroundColor Red
+                        $Script:ReqTenantID = "<Not Specified>"
+                        $Script:ReqTenantDomain = "<Not Specified>"
+                        Write-Host ""
+                        Write-Host "Set the Requested Tenant ID and Requested Tenant Domain to Defaults`n" -ForegroundColor Green
+                    }
+            }
+        EM-DisconnectTeamsPS
+
+        pause
+        Write-Log -Severity Info -Message "Option 3: Optional - Specify Tenant ID (Guest Access & Microsoft Partners) Complete, Returning to the Main Menu"  
+    }
+
+elseif ($Confirm1 -eq "4")
+    {
+        Write-Host "Option 4: Optional - Change Microsoft 365 Cloud Environments Selected`n"
+        Write-Log -Severity Info -Message "Option 4: Optional - Change Microsoft 365 Cloud Environments Selected"
+
+        Write-Host "Please select the number from the list below that is Microsoft 365 Cloud Environment you want to connect to:`n"
+        Write-Host "1: "-ForegroundColor Green -NoNewLine
+        Write-Host "CC-GCC - Commercial Cloud (CC) & Government Cloud (GCC)"
+        Write-Host "2: "-ForegroundColor Green -NoNewLine
+        Write-Host "CC-Germany - Commercial Cloud (CC) Teams & O365Germany Exchange"
+        Write-Host "3: "-ForegroundColor Green -NoNewLine
+        Write-Host "GCCH - US Goverment High Cloud (GCCH)"
+        Write-Host "4: "-ForegroundColor Green -NoNewLine
+        Write-Host "DOD - US Department of Defense (DOD)"
+        Write-Host "5: "-ForegroundColor Green -NoNewLine
+        Write-Host "China-21Vianet - Microsoft China Operated By 21Vianet`n"
+
+        $Script:M365EnvironmentRaw = Read-Host "M365 Environment"
+        Write-Host""
+
+        if ($Script:M365EnvironmentRaw -eq 1)
+            {
+                $Script:M365EnvironmentNameID = "Commercial Cloud (CC) & Government Cloud (GCC)"
+                $Script:TeamsEnvironmentNameID = "TeamsCC-GCC"
+                $Script:ExchangeEnvironmentNameID = "O365Default"
+            }
+        elseif ($Script:M365EnvironmentRaw -eq 2)
+            {
+                $Script:M365EnvironmentNameID = "Commercial Cloud (CC) Teams & O365Germany Exchange"
+                $Script:TeamsEnvironmentNameID = "TeamsCC-GCC"
+                $Script:ExchangeEnvironmentNameID = "O365GermanyCloud"
+            }
+        elseif ($Script:M365EnvironmentRaw -eq 3)
+            {
+                $Script:M365EnvironmentNameID = "US Goverment High Cloud (GCCH)"
+                $Script:TeamsEnvironmentNameID = "TeamsGCCH"
+                $Script:ExchangeEnvironmentNameID = "O365USGovGCCHigh"
+            }
+        elseif ($Script:M365EnvironmentRaw -eq 4)
+            {
+                $Script:M365EnvironmentNameID = "US Department of Defense (DOD)"
+                $Script:TeamsEnvironmentNameID = "TeamsDOD"
+                $Script:ExchangeEnvironmentNameID = "O365USGovDoD"
+            }
+        elseif ($Script:M365EnvironmentRaw -eq 5)
+            {
+                $Script:M365EnvironmentNameID = "Microsoft China Operated By 21Vianet"
+                $Script:TeamsEnvironmentNameID = "TeamsChina"
+                $Script:ExchangeEnvironmentNameID = "O365China"
+            }
+        else
+            {
+                Write-Host "Invalid Selection`n" -ForegroundColor Red
+            }
+        Write-Host "Microsoft 365 Cloud Environment is set to $($Script:M365EnvironmentNameID)`n" -ForegroundColor Green
+        EM-DisconnectTeamsPS
+
+        pause
+        Write-Log -Severity Info -Message "Option 4: Optional - Change Microsoft 365 Cloud Environments Complete, Returning to the Main Menu"  
+    }
+
+elseif ($Confirm1 -eq "9")
+    {
+        Write-Host "Option 9: Disconnect All Admin Connections Selected. Closing Connections...`n"
+        Write-Log -Severity Info -Message "Option 9: Disconnect All Admin Connections Selected. Closing Connections..."
         EM-DisconnectTeamsPS
         Write-Log -Severity Info -Message "Clearing all Admin Connection Variables"
-        $Script:TeamsConnection = "<Not Set>"
-        $Script:TenantDomain = "<Not Set>"
-        $Script:TenantID = "<Not Set>"
-        $Script:M365Admin = "<Not Set>"
+        $Script:TeamsConnection = $null
+        $Script:TenantDomain = "<Not Connected>"
+        $Script:TenantID = "<Not Connected>"
+        $Script:M365Admin = "<Not Connected>"
         Write-Log -Severity Info -Message "All Admin Connection Variables Cleared"
-        Write-Log -Severity Info -Message "Option 2: Close all Admin Connections Complete, Returning to the Main Menu"
+        Write-Log -Severity Info -Message "Option 9: Disconnect All Admin Connections Complete, Returning to the Main Menu"
     }
 
 elseif ($Confirm1 -eq "10")
     {
-        Write-Host "Option 10: Provision a Single User Account Selected"
-        Write-Log -Severity Info -Message "Option 10: Provision a Single User Account Selected"
-        Write-Host "This feature has been deprecated. Please use the bul import function of Option 11"
-        
+        Write-Host "Option 10: Deprecated Selected`n"
+        Write-Log -Severity Info -Message "Option 10: Deprecated Selected"
+
+        Write-Host "This feature has been deprecated. Please use Option 11: Provision Multiple User Accounts (XLSX & CSV Import)`n"
+
         pause
-        Write-Log -Severity Info -Message "Option 10: Provision a Single User Account Complete, Returning to the Main Menu"  
+        Write-Log -Severity Info -Message "Option 10: Deprecated Complete, Returning to the Main Menu"
     }
 
 elseif ($Confirm1 -eq "11")
     {
-        Write-Host "Option 11: Provision Multiple User Accounts (CSV Import) Selected"
-        Write-Log -Severity Info -Message "Option 11: Provision Multiple User Accounts (CSV Import) Selected"
+        Write-Host "Option 11: Provision Multiple User Accounts (XLSX & CSV Import) Selected`n"
+        Write-Log -Severity Info -Message "Option 11: Provision Multiple User Accounts (XLSX & CSV Import) Selected"
 
         #Ensure Teams PS Admin Connection is Setup
         if ($TeamsSession -ne $True)
@@ -887,7 +1036,7 @@ elseif ($Confirm1 -eq "11")
         #Ensure Input Variables are Null
         $Confirmation = $null
         $Script:Users = $null
-        EM-GetUsersCsv
+        [System.Collections.ArrayList]$Script:Users = @(EM-GetDataFile)
         $Script:Count = $null
         $Script:CountInitial = $null
         $Script:Count = $Script:Users.Count
@@ -910,13 +1059,55 @@ elseif ($Confirm1 -eq "11")
             }
 
         pause
-        Write-Log -Severity Info -Message "Option 11: Provision Multiple User Accounts (CSV Import) Complete, Returning to the Main Menu"
+        Write-Log -Severity Info -Message "Option 10: Provision Multiple User Accounts (XLSX & CSV Import) Complete, Returning to the Main Menu"
     }
 
 elseif ($Confirm1 -eq "12")
     {
-        Write-Host "Option 12: Export User Calling Settings (CSV Import) Selected"
-        Write-Log -Severity Info -Message "Option 12: Export User Calling Settings (CSV Import) Selected"
+        Write-Host "Option 12: Bulk Remove ALL CsPhoneNumberAssignments from Users (XLSX & CSV Import) Selected`n"
+        Write-Log -Severity Info -Message "Option 12: Bulk Remove ALL CsPhoneNumberAssignments from Users (XLSX & CSV Import) Selected"
+
+        #Ensure Teams PS Admin Connection is Setup
+        if ($TeamsSession -ne $True)
+            {
+                Write-Host "Teams PowerShell Session is Not Active. Setting Up the Needed Admin Connection`n" -ForegroundColor Yellow
+                Write-Log -Severity Info -Message "Teams PowerShell Session is Not Active. Setting Up the Needed Admin Connection"
+                EM-ConnectTeamsPS
+            }
+
+        #Ensure Input Variables are Null
+        $Confirmation = $null
+        $Script:Users = $null
+        [System.Collections.ArrayList]$Script:Users = @(EM-GetDataFile)
+        $Script:Count = $null
+        $Script:CountInitial = $null
+        $Script:Count = $Script:Users.Count
+        $Script:CountInitial = $Script:Users.Count
+
+        $Confirmation = Read-Host "Are you sure that you want to remove ALL phone numbers from $Script:Count User(s) for Microsoft Teams Voice? (Y/N)"
+
+        if ($Confirmation -eq "Y")
+            {
+                EM-RemoveAllCsPhoneNumberAssignments
+                Write-Host "-----------------------------------------------------------------------------------------------"
+                Write-Log -Severity Info -Message "-----------------------------------------------------------------------------------------------"
+                EM-RetryProvisioningErrors
+                
+            }
+        else
+            {
+                Write-Host "Operator Canceled the User Provisioning Operation" -ForegroundColor Yellow
+                Write-Log -Severity WARN -Message "Operator Canceled the User Provisioning Operation"
+            }
+
+        pause
+        Write-Log -Severity Info -Message "Option 12: Bulk Remove ALL CsPhoneNumberAssignments from Users (XLSX & CSV Import) Complete, Returning to the Main Menu"
+    }
+
+elseif ($Confirm1 -eq "13")
+    {
+        Write-Host "Option 13: Export User Calling Settings (XLSX & CSV Import) Selected`n"
+        Write-Log -Severity Info -Message "Option 13: Export User Calling Settings (XLSX & CSV Import) Selected"
     
         #Ensure Teams PS Admin Connection is Setup
         if ($TeamsSession -ne $True)
@@ -932,7 +1123,7 @@ elseif ($Confirm1 -eq "12")
         $output = $null
 
         #Get Data
-        EM-GetUsersCsv
+        [System.Collections.ArrayList]$Script:Users = @(EM-GetDataFile)
         $Script:CountInitial = $Script:Users.Count
         $Script:Count = $Script:Users.Count
         
@@ -989,15 +1180,15 @@ elseif ($Confirm1 -eq "12")
             }
 
         pause
-        Write-Log -Severity Info -Message "Option 12: Export User Calling Settings (CSV Import) Complete, Returning to the Main Menu"
+        Write-Log -Severity Info -Message "Option 13: Export User Calling Settings (XLSX & CSV Import) Complete, Returning to the Main Menu"
     }
 
-elseif ($Confirm1 -eq "13")
+elseif ($Confirm1 -eq "14")
     {
         if ($Script:BetaFlightsEnabled -eq $True)
             {
-                Write-Host "Option 13: (Beta) Validate Teams Only Users for Readiness (CSV Import) Selected"
-                Write-Log -Severity Info -Message "Option 13: (Beta) Validate Teams Only Users for Readiness (CSV Import) Selected"
+                Write-Host "Option 14: (Beta) Validate Teams Only Users for Readiness (XLSX & CSV Import) Selected"
+                Write-Log -Severity Info -Message "Option 14: (Beta) Validate Teams Only Users for Readiness (XLSX & CSV Import) Selected"
             
                 #Ensure Teams PS Admin Connection is Setup
                 if ($TeamsSession -ne $True)
@@ -1013,7 +1204,7 @@ elseif ($Confirm1 -eq "13")
                 $output = $null
 
                 #Get Data
-                EM-GetUsersCsv
+                [System.Collections.ArrayList]$Script:Users = @(EM-GetDataFile)
                 $Script:CountInitial = $Script:Users.Count
                 $Script:Count = $Script:Users.Count
                 
@@ -1021,14 +1212,14 @@ elseif ($Confirm1 -eq "13")
                 Write-Host "Work In Progress for Future Release"
 
                 pause
-                Write-Log -Severity Info -Message "Option 13: (Beta) Validate Teams Only Users for Readiness (CSV Import) Complete, Returning to the Main Menu"
+                Write-Log -Severity Info -Message "Option 14: (Beta) Validate Teams Only Users for Readiness (XLSX & CSV Import) Complete, Returning to the Main Menu"
             }
         else
             {
                 Write-Host "User not Authorized for this task!!!" -ForegroundColor Red
                 Write-Log -Severity WARN -Message "User not Authorized for this task!!!"
                 pause
-                Write-Log -Severity Info -Message "Option 13: Returning to the Main Menu"
+                Write-Log -Severity Info -Message "Option 14: Returning to the Main Menu"
             }
     }
 
@@ -1058,7 +1249,8 @@ else
             {
                 Write-Host "No Mode Selected" -ForegroundColor Yellow
                 Write-Log -Severity Info -Message "No Mode Selected"
-                $Confirm1 = "99"
+                #Disabling Invalid Mode Due to Keyboard Inputs potentially causing issues. Keeping code here
+                #$Confirm1 = "99"
             }
     }
 }
