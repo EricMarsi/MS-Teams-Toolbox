@@ -20,32 +20,36 @@
 #v2405.1
 #   -CHANGE - Script Minimum Teams PS Module updated to 6.1.0 from 5.7.1
 #
-#
-#
-#
+#v2408.1
+#   -CHANGE - Script Renamed from "Microsoft Teams User Account Provisioning Utility" to "MS Teams Account Provisioning Utility"
+#   -CHANGE - Script Minimum Teams PS Module updated to 6.4.0 from 6.1.0
+#   -CHANGE - Reorganized the order of policy assignment to be alphabetical based on PowerShell cmdlet
+#   -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
+#   -FEATURE - Added support to assign a Call Park, Calling Policy, Voice Application Policy, Voicemail Policy, Shared Calling Policy, and/or a IP Phone Policy to a user
+#    -Supported Policies: CsCallingLineIdentity, CsOnlineAudioConferencingRoutingPolicy, CsOnlineVoicemailPolicy, CsOnlineVoiceRoutingPolicy, CsTeamsCallingPolicy, CsTeamsCallParkPolicy, CsTeamsEmergencyCallingPolicy, CsTeamsEmergencyCallRoutingPolicy, CsTeamsIPPhonePolicy, CsTeamsSharedCallingRoutingPolicy, CsTeamsVoiceApplicationsPolicy, and CsTenantDialPlan
 #
 #**Future Release Things to Add/Change/Fix**
+#   -BUG - Not Working on a Mac
 #   -BUG - Change the Script Updater to get the name of the running script that will be replaced rather than just guessing the name. This fixes the update bug.
-#   -BUG - SKIPFix the progress counter to show the count of 1 when finished provisioning a single user. "0 of  User(s) Remain..." is how it is displated today.
 #   -CHANGE - Clean up the Provision Account Utility to have a sub function for policy assignement. Makes adding new policies in the future easier and minifies the script.
+#   -CHANGE - Update Script to Require PowerShell 7.2 for all functions due to Teams PS Module 6.3.0 now supporting the newer release.
 #   -FEATURE - Change the Script Updater to skip any checks if the $Script:BuildFlag variable is set to BETA instead of RELEASE.
 #   -FEATURE - Add the ability to Enterprise Voice Enable a User with No PhoneNumber, PhoneNumberType, or LocationID set.
-#   -FEATURE - Add support to assign a Call Park, Calling Policy, Voice Application Policy, or a shared calling policy to a user in both single user and multi-user mode.
 #   -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
 #   -FEATURE - Add support for assigning Private Lines to Users.
 #   -FEATURE - Add the ability to auto-normalize US Numbers from 10 digits or 11-digits to proper E.164 format.
 #   -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
 #   -FEATURE - Provision Teams Rooms Accounts from CSV and Rebrand the script
-#   -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
+#   
 #--------------------------------
 
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
-    $Script:Name = "Microsoft Teams User Account Provisioning Utility By Eric Marsi"
-    $Script:BuildVersion = "2405.1"
+    $Script:Name = "MS Teams Account Provisioning Utility By Eric Marsi"
+    $Script:BuildVersion = "2408.1"
     $Script:BuildFlag = "RELEASE"
     $Script:LogPath = "C:\_Logs\EM-MSTeamsUserAccountProvUtil\"
     $Script:LogFileName = "ScriptLog"
-    $Script:TeamsPSMinVer = "6.1.0"
+    $Script:TeamsPSMinVer = "6.4.0"
     $Script:ScriptUpdaterEnabled = $True #Variable to enable or disable the Script GitHub Updater function.
     $Script:ScriptUpdaterGithubRepo = "EricMarsi/MicrosoftTeamsUserAccountProvisioningUtility"
     $Script:ScriptUpdaterGithubScriptName = "Microsoft.Teams.User.Account.Provisioning.Utility.ps1"
@@ -212,7 +216,6 @@ function EM-GetLatestGitHubRelease
                                                 Write-Host "Failed to get latest script version from the server. Continuing with the currently installed version. The Error was: $_.`n" -ForegroundColor Yellow
                                                 Write-Log -Severity ERR -Message "Failed to get latest script version from the server. Continuing with the currently installed version. The Error was: $_."
                                             }
-                                        
                                     }
                                 else
                                     {
@@ -328,7 +331,7 @@ function EM-MainMenu
         Write-Host "Option 1: Setup Admin Connections" -ForegroundColor Green
         Write-Host "Option 2: Close all Admin Connections`n" -ForegroundColor Green
         Write-Host "Script Modes--------------------------------------------------------------------------------------"
-        Write-Host "Option 10: Provision a Single User Account" -ForegroundColor Green
+        Write-Host "Option 10: Deprecated" -ForegroundColor Green
         Write-Host "Option 11: Provision Multiple User Accounts (CSV Import)" -ForegroundColor Green
         Write-Host "Option 12: Export User Calling Settings (CSV Import)" -ForegroundColor Green
         if ($Script:BetaFlightsEnabled -eq $True)
@@ -476,133 +479,8 @@ function EM-ProvisionUsers
                             }
                     }
 
-                #Assign a OVRP to the User
-                if (($User.OnlineVoiceRoutingPolicy -eq "") -or ($User.OnlineVoiceRoutingPolicy -eq "null") -or ($User.OnlineVoiceRoutingPolicy -eq $null) -or ($User.OnlineVoiceRoutingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Online Voice Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Online Voice Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserOVRPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsOnlineVoiceRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.OnlineVoiceRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.OnlineVoiceRoutingPolicy) Online Voice Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.OnlineVoiceRoutingPolicy) Voice Routing Policy Successfully"
-                                $UserOVRPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.OnlineVoiceRoutingPolicy) Voice Routing Policy. The Error Was $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.OnlineVoiceRoutingPolicy) Voice Routing Policy. The Error Was $_"
-                                $Script:ErrorCommands += "Grant-CsOnlineVoiceRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.OnlineVoiceRoutingPolicy) -ErrorAction Stop"
-                                $UserOVRPSuccess = $False
-                            }
-                    }
-                
-                #Assign a OACRP to the User
-                if (($User.OnlineAudioConferencingRoutingPolicy -eq "") -or ($User.OnlineAudioConferencingRoutingPolicy -eq "null") -or ($User.OnlineAudioConferencingRoutingPolicy -eq $null) -or ($User.OnlineAudioConferencingRoutingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Online Audio Conferencing Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Online Audio Conferencing Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserOACRPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsOnlineAudioConferencingRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.OnlineAudioConferencingRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.OnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.OnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy Successfully"
-                                $UserOACRPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.OnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.OnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsOnlineAudioConferencingRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.OnlineAudioConferencingRoutingPolicy) -ErrorAction Stop"
-                                $UserOACRPSuccess = $False
-                            }
-                    }
-                
-                #Assign a Dial Plan to the User
-                if (($User.TenantDialPlan -eq "") -or ($User.TenantDialPlan -eq "null") -or ($User.TenantDialPlan -eq $null) -or ($User.TenantDialPlan -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Tenant Dial Plan as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Tenant Dial Plan to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserDPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTenantDialPlan -Identity $User.UserPrincipalName -PolicyName $User.TenantDialPlan -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.TenantDialPlan) Dial Plan Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.TenantDialPlan) Dial Plan Successfully"
-                                $UserDPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.TenantDialPlan) Dial Plan. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.TenantDialPlan) Dial Plan. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTenantDialPlan -Identity $($User.UserPrincipalName) -PolicyName $($User.TenantDialPlan) -ErrorAction Stop"
-                                $UserDPSuccess = $False
-                            }
-                    }
-
-                #Assign a Emergency Calling Policy to the User
-                if (($User.TeamsEmergencyCallingPolicy -eq "") -or ($User.TeamsEmergencyCallingPolicy -eq "null") -or ($User.TeamsEmergencyCallingPolicy -eq $null) -or ($User.TeamsEmergencyCallingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Emergency Calling Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Emergency Calling Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserECPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsEmergencyCallingPolicy -Identity $User.UserPrincipalName -PolicyName $User.TeamsEmergencyCallingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.TeamsEmergencyCallingPolicy) Emergency Calling Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.TeamsEmergencyCallingPolicy) Emergency Calling Policy Successfully"
-                                $UserECPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.TeamsEmergencyCallingPolicy) Emergency Calling Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.TeamsEmergencyCallingPolicy) Emergency Calling Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsEmergencyCallingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.TeamsEmergencyCallingPolicy) -ErrorAction Stop"
-                                $UserECPSuccess = $False
-                            }
-                    }
-
-                #Assign a Emergency Call Routing Policy to the User
-                if (($User.TeamsEmergencyCallRoutingPolicy -eq "") -or ($User.TeamsEmergencyCallRoutingPolicy -eq "null") -or ($User.TeamsEmergencyCallRoutingPolicy -eq $null) -or ($User.TeamsEmergencyCallRoutingPolicy -eq "N/A"))
-                    {
-                        Write-Host "- Skipping the Assignment of a Emergency Call Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
-                        Write-Log -Severity Info -Message "Skipping the Assignment of a Emergency Call Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
-                        $UserECRPSuccess = $True
-                    }
-                else
-                    {
-                        try
-                            {
-                                Grant-CsTeamsEmergencyCallRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.TeamsEmergencyCallRoutingPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.TeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.TeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy Successfully"
-                                $UserECRPSuccess = $True
-                            }
-                        catch
-                            {
-                                Write-Host "- FAILED to Assign the $($User.TeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.TeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsTeamsEmergencyCallRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.TeamsEmergencyCallRoutingPolicy) -ErrorAction Stop"
-                                $UserECRPSuccess = $False
-                            }
-                    }
-
-                #Assign a Caller ID Policy to the User
-                if (($User.CallerIDPolicy -eq "") -or ($User.CallerIDPolicy -eq "null") -or ($User.CallerIDPolicy -eq $null) -or ($User.CallerIDPolicy -eq "N/A"))
+                #Assign a CsCallingLineIdentity to the User
+                if (($User.CsCallingLineIdentity -eq "") -or ($User.CsCallingLineIdentity -eq "null") -or ($User.CsCallingLineIdentity -eq $null) -or ($User.CsCallingLineIdentity -eq "N/A"))
                     {
                         Write-Host "- Skipping the Assignment of a Caller ID Policy as the Value Provided is NULL" -ForegroundColor Yellow
                         Write-Log -Severity Info -Message "Skipping the Assignment of a Caller ID Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
@@ -612,23 +490,298 @@ function EM-ProvisionUsers
                     {
                         try
                             {
-                                Grant-CsCallingLineIdentity -Identity $User.UserPrincipalName -PolicyName $User.CallerIDPolicy -ErrorAction Stop
-                                Write-Host "- Assigned the $($User.CallerIDPolicy) Caller ID Policy Successfully" -ForegroundColor Green
-                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CallerIDPolicy) Caller ID Policy Successfully"
+                                Grant-CsCallingLineIdentity -Identity $User.UserPrincipalName -PolicyName $User.CsCallingLineIdentity -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsCallingLineIdentity) Caller ID Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsCallingLineIdentity) Caller ID Policy Successfully"
                                 $UserCIDPSuccess = $True
                             }
                         catch
                             {
-                                Write-Host "- FAILED to Assign the $($User.CallerIDPolicy) Caller ID Policy. The Error Was: $_" -ForegroundColor Red
-                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CallerIDPolicy) Caller ID Policy. The Error Was: $_"
-                                $Script:ErrorCommands += "Grant-CsCallingLineIdentity -Identity $($User.UserPrincipalName) -PolicyName $($User.CallerIDPolicy) -ErrorAction Stop"
+                                Write-Host "- FAILED to Assign the $($User.CsCallingLineIdentity) Caller ID Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsCallingLineIdentity) Caller ID Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsCallingLineIdentity -Identity $($User.UserPrincipalName) -PolicyName $($User.CsCallingLineIdentity) -ErrorAction Stop"
                                 $UserCIDPSuccess = $False
+                            }
+                    }
+                
+                #Assign a CsOnlineAudioConferencingRoutingPolicy to the User
+                if (($User.CsOnlineAudioConferencingRoutingPolicy -eq "") -or ($User.CsOnlineAudioConferencingRoutingPolicy -eq "null") -or ($User.CsOnlineAudioConferencingRoutingPolicy -eq $null) -or ($User.CsOnlineAudioConferencingRoutingPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Online Audio Conferencing Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Online Audio Conferencing Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserOACRPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsOnlineAudioConferencingRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineAudioConferencingRoutingPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy Successfully"
+                                $UserOACRPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsOnlineAudioConferencingRoutingPolicy) Online Audio Conferencing Routing Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsOnlineAudioConferencingRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsOnlineAudioConferencingRoutingPolicy) -ErrorAction Stop"
+                                $UserOACRPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsOnlineVoicemailPolicyto the User
+                if (($User.CsOnlineVoicemailPolicy -eq "") -or ($User.CsOnlineVoicemailPolicy -eq "null") -or ($User.CsOnlineVoicemailPolicy -eq $null) -or ($User.CsOnlineVoicemailPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Voicemail Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Voicemail Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserVMPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsOnlineVoicemailPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineVoicemailPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsOnlineVoicemailPolicy) Voicemail Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsOnlineVoicemailPolicy) Voicemail Policy Successfully"
+                                $UserVMPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsOnlineVoicemailPolicy) Voicemail Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsOnlineVoicemailPolicy) Voicemail Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsOnlineVoicemailPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsOnlineVoicemailPolicy) -ErrorAction Stop"
+                                $UserVMPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsOnlineVoiceRoutingPolicy to the User
+                if (($User.CsOnlineVoiceRoutingPolicy -eq "") -or ($User.CsOnlineVoiceRoutingPolicy -eq "null") -or ($User.CsOnlineVoiceRoutingPolicy -eq $null) -or ($User.CsOnlineVoiceRoutingPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Online Voice Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Online Voice Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserOVRPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsOnlineVoiceRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsOnlineVoiceRoutingPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsOnlineVoiceRoutingPolicy) Online Voice Routing Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsOnlineVoiceRoutingPolicy) Voice Routing Policy Successfully"
+                                $UserOVRPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsOnlineVoiceRoutingPolicy) Voice Routing Policy. The Error Was $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsOnlineVoiceRoutingPolicy) Voice Routing Policy. The Error Was $_"
+                                $Script:ErrorCommands += "Grant-CsOnlineVoiceRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsOnlineVoiceRoutingPolicy) -ErrorAction Stop"
+                                $UserOVRPSuccess = $False
+                            }
+                    }
+
+                 #Assign a CsTeamsCallingPolicy to the User
+                if (($User.CsTeamsCallingPolicy -eq "") -or ($User.CsTeamsCallingPolicy -eq "null") -or ($User.CsTeamsCallingPolicy -eq $null) -or ($User.CsTeamsCallingPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Calling Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Calling Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserCPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsCallingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsCallingPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsCallingPolicy) Calling Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsCallingPolicy) Calling Policy Successfully"
+                                $UserCPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsCallingPolicy) Calling Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsCallingPolicy) Calling Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsCallingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsCallingPolicy) -ErrorAction Stop"
+                                $UserCPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTeamsCallParkPolicy to the User
+                if (($User.CsTeamsCallParkPolicy -eq "") -or ($User.CsTeamsCallParkPolicy -eq "null") -or ($User.CsTeamsCallParkPolicy -eq $null) -or ($User.CsTeamsCallParkPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Call Park Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Call Park Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserCPPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsCallParkPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsCallParkPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsCallParkPolicy) Call Park Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsCallParkPolicy) Call Park Policy Successfully"
+                                $UserCPPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsCallParkPolicy) Call Park Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsCallParkPolicy) Call Park Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsCallParkPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsCallParkPolicy) -ErrorAction Stop"
+                                $UserCPPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTeamsEmergencyCallingPolicy to the User
+                if (($User.CsTeamsEmergencyCallingPolicy -eq "") -or ($User.CsTeamsEmergencyCallingPolicy -eq "null") -or ($User.CsTeamsEmergencyCallingPolicy -eq $null) -or ($User.CsTeamsEmergencyCallingPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Emergency Calling Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Emergency Calling Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserECPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsEmergencyCallingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsEmergencyCallingPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy Successfully"
+                                $UserECPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallingPolicy) Emergency Calling Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsEmergencyCallingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsEmergencyCallingPolicy) -ErrorAction Stop"
+                                $UserECPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTeamsEmergencyCallRoutingPolicy to the User
+                if (($User.CsTeamsEmergencyCallRoutingPolicy -eq "") -or ($User.CsTeamsEmergencyCallRoutingPolicy -eq "null") -or ($User.CsTeamsEmergencyCallRoutingPolicy -eq $null) -or ($User.CsTeamsEmergencyCallRoutingPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Emergency Call Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Emergency Call Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserECRPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsEmergencyCallRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsEmergencyCallRoutingPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy Successfully"
+                                $UserECRPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsEmergencyCallRoutingPolicy) Emergency Call Routing Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsEmergencyCallRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsEmergencyCallRoutingPolicy) -ErrorAction Stop"
+                                $UserECRPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTeamsIPPhonePolicy to the User
+                if (($User.CsTeamsIPPhonePolicy -eq "") -or ($User.CsTeamsIPPhonePolicy -eq "null") -or ($User.CsTeamsIPPhonePolicy -eq $null) -or ($User.CsTeamsIPPhonePolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a IP Phone Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a IP Phone Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserIPPPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsIPPhonePolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsIPPhonePolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsIPPhonePolicy) IP Phone Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsIPPhonePolicy) IP Phone Policy Successfully"
+                                $UserIPPPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsIPPhonePolicy) IP Phone Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsIPPhonePolicy) IP Phone Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsIPPhonePolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsIPPhonePolicy) -ErrorAction Stop"
+                                $UserIPPPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTeamsSharedCallingRoutingPolicy to the User
+                if (($User.CsTeamsSharedCallingRoutingPolicy -eq "") -or ($User.CsTeamsSharedCallingRoutingPolicy -eq "null") -or ($User.CsTeamsSharedCallingRoutingPolicy -eq $null) -or ($User.CsTeamsSharedCallingRoutingPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Shared Calling Routing Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Shared Calling Routing Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserSCRPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsSharedCallingRoutingPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsSharedCallingRoutingPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy Successfully"
+                                $UserSCRPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsSharedCallingRoutingPolicy) Shared Calling Routing Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsSharedCallingRoutingPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsSharedCallingRoutingPolicy) -ErrorAction Stop"
+                                $UserSCRPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTeamsVoiceApplicationsPolicy to the User
+                if (($User.CsTeamsVoiceApplicationsPolicy -eq "") -or ($User.CsTeamsVoiceApplicationsPolicy -eq "null") -or ($User.CsTeamsVoiceApplicationsPolicy -eq $null) -or ($User.CsTeamsVoiceApplicationsPolicy -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Voice Applications Policy as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Voice Applications Policy to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserVAPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTeamsVoiceApplicationsPolicy -Identity $User.UserPrincipalName -PolicyName $User.CsTeamsVoiceApplicationsPolicy -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy Successfully"
+                                $UserVAPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTeamsVoiceApplicationsPolicy) Voice Applications Policy. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTeamsVoiceApplicationsPolicy -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTeamsVoiceApplicationsPolicy) -ErrorAction Stop"
+                                $UserVAPSuccess = $False
+                            }
+                    }
+
+                #Assign a CsTenantDialPlan to the User
+                if (($User.CsTenantDialPlan -eq "") -or ($User.CsTenantDialPlan -eq "null") -or ($User.CsTenantDialPlan -eq $null) -or ($User.CsTenantDialPlan -eq "N/A"))
+                    {
+                        Write-Host "- Skipping the Assignment of a Tenant Dial Plan as the Value Provided is NULL" -ForegroundColor Yellow
+                        Write-Log -Severity Info -Message "Skipping the Assignment of a Tenant Dial Plan to $($User.UserPrincipalName) as the Value Provided is NULL"  
+                        $UserDPSuccess = $True
+                    }
+                else
+                    {
+                        try
+                            {
+                                Grant-CsTenantDialPlan -Identity $User.UserPrincipalName -PolicyName $User.CsTenantDialPlan -ErrorAction Stop
+                                Write-Host "- Assigned the $($User.CsTenantDialPlan) Dial Plan Successfully" -ForegroundColor Green
+                                Write-Log -Severity Info -Message "Assigned $($User.UserPrincipalName) the $($User.CsTenantDialPlan) Dial Plan Successfully"
+                                $UserDPSuccess = $True
+                            }
+                        catch
+                            {
+                                Write-Host "- FAILED to Assign the $($User.CsTenantDialPlan) Dial Plan. The Error Was: $_" -ForegroundColor Red
+                                Write-Log -Severity ERR -Message "FAILED to Assign $($User.UserPrincipalName) the $($User.CsTenantDialPlan) Dial Plan. The Error Was: $_"
+                                $Script:ErrorCommands += "Grant-CsTenantDialPlan -Identity $($User.UserPrincipalName) -PolicyName $($User.CsTenantDialPlan) -ErrorAction Stop"
+                                $UserDPSuccess = $False
                             }
                     }
 
                 $Script:Count = $Script:Count - 1 #Decrease remaining users count by 1
 
-                if (($UserLineURISuccess -eq $True) -and ($UserOVRPSuccess -eq $True) -and ($UserOACRPSuccess -eq $True) -and ($UserDPSuccess -eq $True) -and ($UserECPSuccess -eq $True) -and ($UserECRPSuccess -eq $True) -and ($UserCIDPSuccess -eq $True))
+                if (($UserLineURISuccess -eq $True) -and ($UserOVRPSuccess -eq $True) -and ($UserOACRPSuccess -eq $True) -and ($UserDPSuccess -eq $True) -and ($UserECPSuccess -eq $True) -and ($UserECRPSuccess -eq $True) -and ($UserCIDPSuccess -eq $True) -and ($UserVMPSuccess -eq $True) -and ($UserCPPSuccess -eq $True) -and ($UserCPSuccess -eq $True) -and ($UserVAPSuccess -eq $True) -and ($UserSCRPSuccess -eq $True) -and ($UserIPPPSuccess -eq $True))
                     {
                         Write-Host ""
                         Write-Host "Provisioned $($User.UserPrincipalName) Successfully! $($Script:Count) of $($Script:CountInitial) User(s) Remain...`n" -ForegroundColor Green
@@ -712,74 +865,8 @@ elseif ($Confirm1 -eq "10")
     {
         Write-Host "Option 10: Provision a Single User Account Selected"
         Write-Log -Severity Info -Message "Option 10: Provision a Single User Account Selected"
-
-        #Ensure Teams PS Admin Connection is Setup
-        if ($TeamsSession -ne $True)
-            {
-                Write-Host "Teams PowerShell Session is Not Active. Setting Up the Needed Admin Connection`n" -ForegroundColor Yellow
-                Write-Log -Severity Info -Message "Teams PowerShell Session is Not Active. Setting Up the Needed Admin Connection"
-                EM-ConnectTeamsPS
-            }
+        Write-Host "This feature has been deprecated. Please use the bul import function of Option 11"
         
-        #Ensure Input Variables are Null
-        $Confirmation = $null
-        $Script:Users = $null
-        $Users = $null
-        $UserUPN = $null
-        $UserPN = $null
-        $UserPNT = $null
-        $UserLID = $null
-        $UserOVRP = $null
-        $UserOACRP = $null
-        $UserDP = $null
-        $UserECP = $null
-        $UserECRP = $null
-        $UserCIDP = $null
-        $Script:Count = 1
-
-        #Get User Information
-        Write-Host "For any of the below values, if you would like no value set, please leave the field blank or enter null for none`n"-ForegroundColor Yellow
-        $UserUPN = Read-Host "Please enter the UPN for the User you wish to provision (Ex:User@domain.com)"
-        $UserPN = Read-Host "Please enter the phone number to assign (Ex: +13305550001)"
-        $UserPNT = Read-Host "Please enter the PhoneNumberType to assign (Ex: DirectRouting, CallingPlan, or OperatorConnect)"
-        $UserLID = Read-Host "Please enter the LocationID to assign in GUID Format if applicable. Required for OC/CP else leave blank"
-        $UserOVRP = Read-Host "Please enter the name of the Online Voice Routing Policy to assign"
-        $UserOACRP = Read-Host "Please enter the name of the Online Audio Conferencing Routing Policy to assign"
-        $UserDP = Read-Host "Please enter the name of the Dial Plan to assign"
-        $UserECP = Read-Host "Please enter the name of the Emergency Calling Policy to assign"
-        $UserECRP = Read-Host "Please enter the name of the Emergency Call Routing Policy to assign"
-        $UserCIDP = Read-Host "Please enter the name of the Caller ID Policy to assign"
-
-        [System.Collections.ArrayList]$Script:Users = @()
-        $Users = New-Object PSCustomObject
-        $Users | Add-Member -NotePropertyName UserPrincipalName -NotePropertyValue $UserUPN
-        $Users | Add-Member -NotePropertyName PhoneNumber -NotePropertyValue $UserPN
-        $Users | Add-Member -NotePropertyName PhoneNumberType -NotePropertyValue $UserPNT
-        $Users | Add-Member -NotePropertyName LocationID -NotePropertyValue $UserLID
-        $Users | Add-Member -NotePropertyName OnlineVoiceRoutingPolicy -NotePropertyValue $UserOVRP
-        $Users | Add-Member -NotePropertyName OnlineAudioConferencingRoutingPolicy -NotePropertyValue $UserOACRP
-        $Users | Add-Member -NotePropertyName TenantDialPlan -NotePropertyValue $UserDP
-        $Users | Add-Member -NotePropertyName TeamsEmergencyCallingPolicy -NotePropertyValue $UserECP
-        $Users | Add-Member -NotePropertyName TeamsEmergencyCallRoutingPolicy -NotePropertyValue $UserECRP
-        $Users | Add-Member -NotePropertyName CallerIDPolicy -NotePropertyValue $UserCIDP
-        $Script:Users = $Users
-
-        Write-Host ""
-        $Confirmation = Read-Host "Are you sure that you want to provision 1 User for Microsoft Teams Voice? (Y/N)"
-
-        if ($Confirmation -eq "Y")
-            {
-                EM-ProvisionUsers
-                Write-Host "-----------------------------------------------------------------------------------------------"
-                Write-Log -Severity Info -Message "-----------------------------------------------------------------------------------------------"
-                EM-RetryProvisioningErrors
-            }
-        else
-            {
-                Write-Host "Operator Canceled the User Provisioning Operation" -ForegroundColor Yellow
-                Write-Log -Severity WARN -Message "Operator Canceled the User Provisioning Operation"
-            }
-
         pause
         Write-Log -Severity Info -Message "Option 10: Provision a Single User Account Complete, Returning to the Main Menu"  
     }
