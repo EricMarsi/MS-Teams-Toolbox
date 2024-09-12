@@ -3,65 +3,75 @@ Script Written By Eric Marsi | www.ericmarsi.com | https://www.ericmarsi.com/202
 
 ChangeLog-----------------------
 v2301.1
-   -Initial Release
+    -Initial Release
 
 v2302.1
-   -CHANGE - Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
-   -FEATURE - Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
-    -Supported Values are DirectRouting, CallingPlan, and OperatorConnect
-   -FEATURE - Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
-   -FEATURE - Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
+    -CHANGE - Script Minimum Teams PS Module updated to 4.9.3 from 4.9.1
+    -FEATURE - Added PhoneNumberType to the Import CSV & Single User Mode. The script can then be used for Direct Routing, Operator Connect, and Calling Plans customers
+        -Supported Values are DirectRouting, CallingPlan, and OperatorConnect
+    -FEATURE - Updated Text on PhoneNumber Provisioning to Support the move away from LineURI to PhoneNumber
+    -FEATURE - Added a Script GitHub Updater function. If this fails (Firewall Blocking, etc.), existing version continues working
 
 v2310.1_BETA
-   -BUG - Updated misc script descriptors and other text objects for accuracy
-   -CHANGE - Script Minimum Teams PS Module updated to 5.7.1 from 4.9.3
-   -FEATURE - Added support for LocationID in Set-CsPhoneNumberAssignment. This field is optional for DR, required for CP/OC,and requires a new Template CSV
-   -FEATURE - Added support for assigning Caller ID Policies (CallingLineIdentity) to users
+    -BUG - Updated misc script descriptors and other text objects for accuracy
+    -CHANGE - Script Minimum Teams PS Module updated to 5.7.1 from 4.9.3
+    -FEATURE - Added support for LocationID in Set-CsPhoneNumberAssignment. This field is optional for DR, required for CP/OC,and requires a new Template CSV
+    -FEATURE - Added support for assigning Caller ID Policies (CallingLineIdentity) to users
 
 v2405.1
-   -CHANGE - Script Minimum Teams PS Module updated to 6.1.0 from 5.7.1
+    -CHANGE - Script Minimum Teams PS Module updated to 6.1.0 from 5.7.1
 
 v2408.1
-   -BUG - Fixed Issue with Disconnect Teams PS Function not updating main menu
-   -CHANGE - Script Renamed from "Microsoft Teams User Account Provisioning Utility" to "MS Teams Account Provisioning Utility"
-   -CHANGE - Script Minimum Teams PS Module updated to 6.4.0 from 6.1.0
-   -CHANGE - Reorganized the order of policy assignment to be alphabetical based on PowerShell cmdlet
-   -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
-   -FEATURE - Added support to assign a Call Park, Calling Policy, Voice Application Policy, Voicemail Policy, Shared Calling Policy, and/or a IP Phone Policy to a user
-    -Supported Policies: CsCallingLineIdentity, CsOnlineAudioConferencingRoutingPolicy, CsOnlineVoicemailPolicy, CsOnlineVoiceRoutingPolicy, CsTeamsCallingPolicy, CsTeamsCallParkPolicy, CsTeamsEmergencyCallingPolicy, CsTeamsEmergencyCallRoutingPolicy, CsTeamsIPPhonePolicy, CsTeamsSharedCallingRoutingPolicy, CsTeamsVoiceApplicationsPolicy, and CsTenantDialPlan
+    -BUG - Fixed Issue with Disconnect Teams PS Function not updating main menu
+    -CHANGE - Script Renamed from "Microsoft Teams User Account Provisioning Utility" to "MS Teams Account Provisioning Utility"
+    -CHANGE - Script Minimum Teams PS Module updated to 6.4.0 from 6.1.0
+    -CHANGE - Reorganized the order of policy assignment to be alphabetical based on PowerShell cmdlet
+    -FEATURE - Remove Single User Provisioning Mode, Not Needed/Clumbersome to manage
+    -FEATURE - Added support to assign a Call Park, Calling Policy, Voice Application Policy, Voicemail Policy, Shared Calling Policy, and/or a IP Phone Policy to a user
+        -Supported Policies: CsCallingLineIdentity, CsOnlineAudioConferencingRoutingPolicy, CsOnlineVoicemailPolicy, CsOnlineVoiceRoutingPolicy, CsTeamsCallingPolicy, CsTeamsCallParkPolicy, CsTeamsEmergencyCallingPolicy, CsTeamsEmergencyCallRoutingPolicy, CsTeamsIPPhonePolicy, CsTeamsSharedCallingRoutingPolicy, CsTeamsVoiceApplicationsPolicy, and CsTenantDialPlan
 
 v2408.2
-   -CHANGE - Script Minimum Teams PS Module updated to 6.5.0 from 6.4.0
-   -CHANGE - Script Renamed from "MS Teams Account Provisioning Utility" to "MS Teams Toolbox"
-   -Change - Change the Script Updater to get the name of largest file in the latest release. This allows for freedom renaming the tool in future releases
-    -A Delta updater was released with the old script filename. This allows for all old versions of the script to auto-update going forward.
-   -CHANGE - Optimized Provsioning Functions with a new EM-PolicyAssignment function
-   -CHANGE - StatusFlag Bits are now set on user enablement for error checking. To be made granular in future feature enhancements
-   -CHANGE - General Code Optimizations & code preparation for upcoming features with Exchange Online
-   -CHANGE - Cleaned up the script to have a sub function for policy assignement. Makes adding new policies in the future easier and minifies the script.
-   -FEATURE - Added a $Script:ConsoleDebugEnable flag to the code header that is enabled by default. This shows or hides the skipped policies and items when provisioning users. Items are still written to log.
-   -FEATURE - Added the ability to switch clouds from Commercial Cloud to GCCH, DOD, and China
-   -FEATURE - Added the ability to set a tenant id from a customer's verified domain name or a static tenant id. This is used to connect to the tenant as a guest user from another tenant or as a Microsoft Partner
-   -FEATURE - Added support for assigning Private Lines to Users
-   -FEATURE - Added support for assigning the Survivable Branch Policy (CsTeamsSurvivableBranchAppliancePolicy) to a user
-   -FEATURE - Added the ability to Enterprise Voice Enable a User with No PhoneNumber, PrivateLineNumber, PhoneNumberType, or LocationID set.
-   -FEATURE - Added the ability to auto-normalize Numbers not stating with a + to hopefully E.164 format - Format is not validated to be proper e.164 to prevent issues
-   -FEATURE - Added Support for Importing Excel User Files for all options. This allows users to edit the user data in Excel form and then use it directly in the script
-    -Had to fix a bug under PhoneNumber and PrivateLineNumber Assignment that acted different due to the import-excel function in LocationID
+    -CHANGE - Script Minimum Teams PS Module updated to 6.5.0 from 6.4.0
+    -CHANGE - Script Renamed from "MS Teams Account Provisioning Utility" to "MS Teams Toolbox"
+    -Change - Change the Script Updater to get the name of largest file in the latest release. This allows for freedom renaming the tool in future releases
+        -A Delta updater was released with the old script filename. This allows for all old versions of the script to auto-update going forward.
+    -CHANGE - Optimized Provsioning Functions with a new EM-PolicyAssignment function
+    -CHANGE - StatusFlag Bits are now set on user enablement for error checking. To be made granular in future feature enhancements
+    -CHANGE - General Code Optimizations & code preparation for upcoming features with Exchange Online
+    -CHANGE - Cleaned up the script to have a sub function for policy assignement. Makes adding new policies in the future easier and minifies the script.
+    -FEATURE - Added a $Script:ConsoleDebugEnable flag to the code header that is enabled by default. This shows or hides the skipped policies and items when provisioning users. Items are still written to log.
+    -FEATURE - Added the ability to switch clouds from Commercial Cloud to GCCH, DOD, and China
+    -FEATURE - Added the ability to set a tenant id from a customer's verified domain name or a static tenant id. This is used to connect to the tenant as a guest user from another tenant or as a Microsoft Partner
+    -FEATURE - Added support for assigning Private Lines to Users
+    -FEATURE - Added support for assigning the Survivable Branch Policy (CsTeamsSurvivableBranchAppliancePolicy) to a user
+    -FEATURE - Added the ability to Enterprise Voice Enable a User with No PhoneNumber, PrivateLineNumber, PhoneNumberType, or LocationID set.
+    -FEATURE - Added the ability to auto-normalize Numbers not stating with a + to hopefully E.164 format - Format is not validated to be proper e.164 to prevent issues
+    -FEATURE - Added Support for Importing Excel User Files for all options. This allows users to edit the user data in Excel form and then use it directly in the script
+        -Had to fix a bug under PhoneNumber and PrivateLineNumber Assignment that acted different due to the import-excel function in LocationID
 
+v2409.1
+    -BUG - Fixed an issue where policies with a space in the name would not assign - Found in Testing :)
 
 **Future Release Things to Add/Change/Fix**
-   -BUG - Not Working on a Mac - IsAdmin and File Import Dialog - Have to migrate to PS 7.2 to support this
-   -CHANGE - Update Script to Require PowerShell 7.2 for all functions due to Teams PS Module 6.3.0 now supporting the newer release.
-   -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
-   -FEATURE - Rewrite line uri assignment/EV Enable under a sub functon (EM-SetCsUserPhoneNumberAssignment)
-   -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
-   -FEATURE - Provision Teams Rooms Accounts from CSV and Rebrand the script
+    -BUG - Line 641 the if statement is not caring if PrivateLine OR Phone Number is set, need to make it a Double () with a or statement
+    -BUG - Not Working on a Mac - IsAdmin and File Import Dialog - Have to migrate to PS 7.2 to support this
+    -FEATURE - The script now deletes itself once an update is complete
+    -FEATURE - Added a Link to the Main Menu to Access Documentation
+    -FEATURE - Added a Link to the Main Menu to Enable Beta Flags and $Script:ConsoleDebugEnable
+    -FEATURE - PS7.2 Migration
+        -Needed to Add Mac Support
+    -FEATURE - Provision Room Accounts (Standard Provisioning Plus Calendar Processing in Exchange)
+    -CHANGE - Update Script to Require PowerShell 7.2 for all functions due to Teams PS Module 6.3.0 now supporting the newer release.
+    -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
+    -FEATURE - Rewrite line uri assignment/EV Enable under a sub functon (EM-SetCsUserPhoneNumberAssignment)
+    -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
+    -FEATURE - Provision Teams Rooms Accounts from CSV and Rebrand the script
+    -FEATUER - Source of Truth Addition - Dump everything for every user mentioned, and only run policy and DID changes for values that changed - Service?
 #>
 
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
     $Script:Name = "MS Teams Toolbox By Eric Marsi"
-    $Script:BuildVersion = "2408.2"
+    $Script:BuildVersion = "2409.1"
     $Script:LogPath = "C:\_Logs\EM-MSTeamsToolbox\"
     $Script:LogFileName = "ScriptLog"
     $Script:TeamsPSMinVer = "6.5.0"
@@ -488,7 +498,7 @@ function EM-PolicyAssignment #Used Inside #EM-ProvisionUsers
             {
                 try
                     {
-                        $CMD = "Grant-$($TeamsCmdlet) -Identity $($Identity) -PolicyName $($PolicyName) -ErrorAction Stop"
+                        $CMD = "Grant-$($TeamsCmdlet) -Identity $($Identity) -PolicyName '$($PolicyName)' -ErrorAction Stop"
                         Invoke-Expression $CMD -ErrorAction Stop
                         Write-Host "- Assigned the $($PolicyName) $($TeamsCmdletDescription) Successfully" -ForegroundColor Green
                         Write-Log -Severity Info -Message "Assigned $($Identity) the $($PolicyName) $($TeamsCmdletDescription) Successfully"
