@@ -58,6 +58,10 @@ v2601.1
     -FEATURE - Added support to assign a Teams Compliance Recording Policy and/or a Video Interop Service Policy to a user
     -FEATURE - Added OP11 and 12 to license users with the license SKU provided and to disable entra user password expiration
 
+v2603.1
+    -FEATURE - Increased Speed of Graph PowerShell Import by importing only required modules.
+    -FEATURE - Allows for a Policy to be set to Global. This sets the variable to $NULL when running the command reseting the user to the Global Policy.
+    -CHANGE - Force the requirement of PowerShell 7.5.4 at a minimum. To add upgrade option later.
 
 **Future Release Things to Add/Change/Fix**
     -BUG - Line 641 the if statement is not caring if PrivateLine OR Phone Number is set, need to make it a Double () with a or statement
@@ -71,7 +75,6 @@ v2601.1
     -FEATURE - PS 7 Migration
         -Needed to Add Mac Support
         -winget install Microsoft.PowerShell
-    -CHANGE - Update Script to Require PowerShell 7 for all functions due to Teams PS Module 6.3.0 now supporting the newer release.
     -FEATURE - Add a function to validate that users are ready to be provisioned for CP/OC/DR. Maybe Add a SFB User Prep too but TBD on that.
     -FEATURE - Rewrite line uri assignment/EV Enable under a sub functon (EM-SetCsUserPhoneNumberAssignment)
     -FEATURE - Write-Log of UPN in Separate Column and a Data Column. Maybe a Separate function just for ease of fixing the issue in the future.
@@ -81,11 +84,11 @@ v2601.1
 
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
     $Script:Name = "MS Teams Toolbox By Eric Marsi"
-    $Script:BuildVersion = "2601.1"
+    $Script:BuildVersion = "2603.1"
     $Script:LogPath = "C:\_Logs\EM-MSTeamsToolbox\"
     $Script:LogFileName = "ScriptLog"
-    $Script:TeamsPSMinVer = "7.5.0"
-    $Script:GraphPSMinVer = "2.34.0"
+    $Script:TeamsPSMinVer = "7.6.0"
+    $Script:GraphPSMinVer = "2.35.1"
     $Script:ExchangePSMinVer = "3.9.0"
     $Script:ImportExcelPSMinVer = "7.8.10"
     $Script:ConsoleDebugEnable = $True #Variable to enable or disable showing skipped policy assignments in the console log
@@ -179,18 +182,18 @@ Write-Log -Severity Info -Message "Script is Running as an Admin"
 Write-Log -Severity Info -Message "Pass: Log File Directory Check"
 Write-Log -Severity Info -Message "Pass: Logging Function Imported"
 
-#Verify that at least PowerShell 5.1 is Installed
-Write-Host "Verifying that at least PowerShell 5.1 is Installed"
-Write-Log -Severity Info -Message "Verifying that at least PowerShell 5.1 is Installed"
-    if([Version]'5.1.00000.000' -GT $PSVersionTable.PSVersion)
+#Verify that at least PowerShell 7.5.4 is Installed
+Write-Host "Verifying that at least PowerShell 7.5.4 is Installed"
+Write-Host "***NOTE: PowerShell 5.1 is no longer supported with this script! Version 7.5.4 at a minimum is required!!!***" -ForegroundColor Yellow
+Write-Log -Severity Info -Message "Verifying that at least PowerShell 7.5.4 is Installed"
+    if([Version]'7.5.0000.000' -GT $PSVersionTable.PSVersion)
     {
-        Write-Log -Severity ERR -Message "PowerShell 5.1 is Not Installed!"
-        Write-Error "The host must be upgraded to at least PowerShell 5.1! Please Refer to: https://www.ericmarsi.com/2021/02/27/installing-the-microsoft-teams-powershell-module/" -ErrorAction Stop
+        Write-Log -Severity ERR -Message "PowerShell 7.5.4 is Not Installed!"
+        Write-Error "The host must be upgraded to at least PowerShell 7.5.4!" -ErrorAction Stop
     }else {
-        Write-Log -Severity Info -Message "Pass: At Least PowerShell 5.1 is Installed"
-        Write-Host "Pass: The host has at least PowerShell 5.1 Installed" -ForegroundColor Green
+        Write-Log -Severity Info -Message "Pass: At Least PowerShell 7.5.4 is Installed"
+        Write-Host "Pass: The host has at least PowerShell 7.5.4 Installed`n" -ForegroundColor Green
     }
-Write-Host "***NOTE: This is the last version of this script that will continue to run on PowerShell 5.1. This script WILL require 7.2 in future updates!***`n" -ForegroundColor Yellow
 
 #Verify that the script is executing in the PowerShell Console and not the ISE
 Write-Host "Verifying that the script is executing in the PowerShell Console and not the ISE"
@@ -482,12 +485,9 @@ function EM-ConnectGraphPS
         Write-Log -Severity Info -Message "Running the EM-ConnectGraphPS Function"
         try
             {
-                Write-Host "NOTE: This can take upwards of 3 minutes due to the new WAP requirements in Graph PS v2.34.0. Please wait...`n" -ForegroundColor Yellow
-                Import-Module Microsoft.Graph
+                Import-Module Microsoft.Graph.Authentication
+                Import-Module Microsoft.Graph.Users
                 Write-Log -Severity Info -Message "Graph Module Imported"
-
-                #Disable WAM as it will Break Logins!!! - Not working anymore in v34 :(
-                Set-MgGraphOption -EnableLoginByWAM $False
 
                 if ($Script:GraphEnvironmentNameID -eq "Global" -and $Script:ReqTenantID -eq "<Not Specified>")
                     {
@@ -605,10 +605,27 @@ function EM-PolicyAssignment #Used Inside #EM-UserProvisioning
         #Clear Input Attributes
         $CMD = $null
 
-        if (($PolicyName-eq "") -or ($PolicyName -eq "null") -or ($PolicyName -eq $null) -or ($PolicyName -eq "N/A"))
+        if (($PolicyName -eq "") -or ($PolicyName -eq "null") -or ($PolicyName -eq $null) -or ($PolicyName -eq "N/A"))
             {
                 if ($Script:ConsoleDebugEnable -eq $True){Write-Host "- Teams: Skipping the Assignment of the $($TeamsCmdletDescription) as the Value Provided is NULL" -ForegroundColor Yellow}
                 Write-Log -Severity Info -Message "Teams: Skipping the Assignment of the $($TeamsCmdletDescription) to $($Identity) as the Value Provided is NULL"  
+            }
+        elseif (($PolicyName -eq "Global") -or ($PolicyName -eq "global")) #Reset to Global
+            {
+                try
+                    {
+                        $CMD = "Grant-$($TeamsCmdlet) -Identity $($Identity) -PolicyName `$Null -ErrorAction Stop"
+                        Invoke-Expression $CMD -ErrorAction Stop
+                        Write-Host "- Teams: Assigned the Global $($TeamsCmdletDescription) Successfully" -ForegroundColor Green
+                        Write-Log -Severity Info -Message "Teams: Assigned $($Identity) the Global $($TeamsCmdletDescription) Successfully"
+                    }
+                catch
+                    {
+                        Write-Host "- Teams: FAILED to Assign the Global $($TeamsCmdletDescription). The Error Was: $_" -ForegroundColor Red
+                        Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($Identity) the Global $($TeamsCmdletDescription). The Error Was: $_"
+                        $Script:ErrorCommands += $CMD
+                        $Script:StatusFlags += $StatusFlagBit
+                    }
             }
         else
             {
