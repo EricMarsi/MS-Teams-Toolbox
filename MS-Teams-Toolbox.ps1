@@ -449,9 +449,6 @@ function EM-ConnectTeamsPS
                             }
                     }
 
-
-
-                                
                 #Set Envrionment Information
                 try
                     {
@@ -1430,7 +1427,7 @@ elseif ($Script:Confirm1 -eq "4")
         Write-Log -Severity Info -Message "Option 4: Optional - Change Microsoft 365 Cloud Environments Complete, Returning to the Main Menu"  
     }
 
-if ($Script:Confirm1 -eq "5")
+elseif ($Script:Confirm1 -eq "5")
     {
         Write-Host "Option 5: Optional - Toggle Teams PS Module WAM Enablement Selected. Setting Up Connections...`n"
         Write-Log -Severity Info -Message "Option 5: Optional - Toggle Teams PS Module WAM Enablement Selected. Setting Up Connections..."
