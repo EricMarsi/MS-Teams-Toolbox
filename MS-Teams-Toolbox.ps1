@@ -61,7 +61,12 @@ v2601.1
 v2603.1
     -FEATURE - Increased Speed of Graph PowerShell Import by importing only required modules.
     -FEATURE - Allows for a Policy to be set to Global. This sets the variable to $NULL when running the command reseting the user to the Global Policy.
-    -CHANGE - Force the requirement of PowerShell 7.5.4 at a minimum. To add upgrade option later.
+    -CHANGE - Force the requirement of PowerShell 7.6.4 at a minimum. To add upgrade option later.
+
+v2607.1
+    -CHANGE - PS Module Updates
+    -CHANGE - Support for Teams PowerShell WAM Enablement & Disablement
+    -CHANGE - Changes Set-CsPhoneNumberAssignment from -PhoneNumber and -PhoneNumberType to -TelephoneNumber and -NumberType from the change in PowerShell 7.9.0
 
 **Future Release Things to Add/Change/Fix**
     -BUG - Line 641 the if statement is not caring if PrivateLine OR Phone Number is set, need to make it a Double () with a or statement
@@ -84,12 +89,12 @@ v2603.1
 
 #Base Script Variables--------------------------------------------------------------------------------------------------------------------------------
     $Script:Name = "MS Teams Toolbox By Eric Marsi"
-    $Script:BuildVersion = "2603.1"
+    $Script:BuildVersion = "2607.1"
     $Script:LogPath = "C:\_Logs\EM-MSTeamsToolbox\"
     $Script:LogFileName = "ScriptLog"
-    $Script:TeamsPSMinVer = "7.6.0"
-    $Script:GraphPSMinVer = "2.35.1"
-    $Script:ExchangePSMinVer = "3.9.0"
+    $Script:TeamsPSMinVer = "7.9.0"
+    $Script:GraphPSMinVer = "2.38.1"
+    $Script:ExchangePSMinVer = "3.10.0"
     $Script:ImportExcelPSMinVer = "7.8.10"
     $Script:ConsoleDebugEnable = $True #Variable to enable or disable showing skipped policy assignments in the console log
     $Script:ScriptUpdaterEnabled = $True #Variable to enable or disable the Script GitHub Updater function.
@@ -103,6 +108,7 @@ v2603.1
     $Script:TeamsEnvironmentNameID = "TeamsCC-GCC"
     $Script:GraphEnvironmentNameID = "Global"
     $Script:ExchangeEnvironmentNameID = "O365Default"
+    $Script:TeamsWAMEnabled = $false
     $Script:TeamsSession = $False
     $Script:GraphSession = $False
     $Script:BetaFlightsEnabled = $False #Variable to Enable Beta Features, Do not change here, activate with activation code from main menu
@@ -182,17 +188,17 @@ Write-Log -Severity Info -Message "Script is Running as an Admin"
 Write-Log -Severity Info -Message "Pass: Log File Directory Check"
 Write-Log -Severity Info -Message "Pass: Logging Function Imported"
 
-#Verify that at least PowerShell 7.5.4 is Installed
-Write-Host "Verifying that at least PowerShell 7.5.4 is Installed"
-Write-Host "***NOTE: PowerShell 5.1 is no longer supported with this script! Version 7.5.4 at a minimum is required!!!***" -ForegroundColor Yellow
-Write-Log -Severity Info -Message "Verifying that at least PowerShell 7.5.4 is Installed"
+#Verify that at least PowerShell 7.6.4 is Installed
+Write-Host "Verifying that at least PowerShell 7.6.4 is Installed"
+Write-Host "***NOTE: PowerShell 5.1 is no longer supported with this script! Version 7.6.4 at a minimum is required!!!***" -ForegroundColor Yellow
+Write-Log -Severity Info -Message "Verifying that at least PowerShell 7.6.4 is Installed"
     if([Version]'7.5.0000.000' -GT $PSVersionTable.PSVersion)
     {
-        Write-Log -Severity ERR -Message "PowerShell 7.5.4 is Not Installed!"
-        Write-Error "The host must be upgraded to at least PowerShell 7.5.4!" -ErrorAction Stop
+        Write-Log -Severity ERR -Message "PowerShell 7.6.4 is Not Installed!"
+        Write-Error "The host must be upgraded to at least PowerShell 7.6.4!" -ErrorAction Stop
     }else {
-        Write-Log -Severity Info -Message "Pass: At Least PowerShell 7.5.4 is Installed"
-        Write-Host "Pass: The host has at least PowerShell 7.5.4 Installed`n" -ForegroundColor Green
+        Write-Log -Severity Info -Message "Pass: At Least PowerShell 7.6.4 is Installed"
+        Write-Host "Pass: The host has at least PowerShell 7.6.4 Installed`n" -ForegroundColor Green
     }
 
 #Verify that the script is executing in the PowerShell Console and not the ISE
@@ -404,22 +410,47 @@ function EM-ConnectTeamsPS
                 Import-Module MicrosoftTeams
                 Write-Log -Severity Info -Message "Teams Module Imported"
 
-                if ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                if ($Script:TeamsWAMEnabled -eq $False)
                     {
-                        $Script:TeamsConnection = Connect-MicrosoftTeams -ErrorAction Stop
+                        if ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -DisableWAM -ErrorAction Stop
+                            }
+                        elseif ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -match "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -DisableWAM -TenantID $Script:ReqTenantID -ErrorAction Stop
+                            }
+                        elseif ($Script:TeamsEnvironmentNameID -ne "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -DisableWAM -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -ErrorAction Stop
+                            }
+                        else #GCCH/DOD/China and Specific Tenant ID
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -DisableWAM -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -TenantID $Script:ReqTenantID -ErrorAction Stop
+                            }
                     }
-                elseif ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -match "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+                else
                     {
-                        $Script:TeamsConnection = Connect-MicrosoftTeams -TenantID $Script:ReqTenantID -ErrorAction Stop
+                        if ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -ErrorAction Stop
+                            }
+                        elseif ($Script:TeamsEnvironmentNameID -eq "TeamsCC-GCC" -and $Script:ReqTenantID -match "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -TenantID $Script:ReqTenantID -ErrorAction Stop
+                            }
+                        elseif ($Script:TeamsEnvironmentNameID -ne "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -ErrorAction Stop
+                            }
+                        else #GCCH/DOD/China and Specific Tenant ID
+                            {
+                                $Script:TeamsConnection = Connect-MicrosoftTeams -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -TenantID $Script:ReqTenantID -ErrorAction Stop
+                            }
                     }
-                elseif ($Script:TeamsEnvironmentNameID -ne "TeamsCC-GCC" -and $Script:ReqTenantID -eq "<Not Specified>")
-                    {
-                        $Script:TeamsConnection = Connect-MicrosoftTeams -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -ErrorAction Stop
-                    }
-                else #GCCH/DOD/China and Specific Tenant ID
-                    {
-                        $Script:TeamsConnection = Connect-MicrosoftTeams -TeamsEnvironmentName $Script:TeamsEnvironmentNameID -TenantID $Script:ReqTenantID -ErrorAction Stop
-                    }
+
+
+
                                 
                 #Set Envrionment Information
                 try
@@ -894,19 +925,19 @@ function EM-UserProvisioning
                 if (($Script:Confirm1 -eq "10") -or ($Script:Confirm1 -eq "11"))
                     {
                         #Parse PhoneNumber field to start with a +
-                            if ($User.PhoneNumber -match "^\+?(.*)")
+                            if ($User.TelephoneNumber -match "^\+?(.*)")
                                 {
-                                    $User.PhoneNumber | Select-String -pattern "^\+?(.*)" | foreach-object {$_.line -match "^\+?(.*)" > $nul}
+                                    $User.TelephoneNumber | Select-String -pattern "^\+?(.*)" | foreach-object {$_.line -match "^\+?(.*)" > $nul}
                                     $UserPhoneNumberToAssign = "+$($matches[1])"
                                 }
                             #Really don't know what the format is but still allow the script user to assign it ¯\_(ツ)_/¯
                             else 
                                 {
-                                    $UserPhoneNumberToAssign = $User.PhoneNumber
+                                    $UserPhoneNumberToAssign = $User.TelephoneNumber
                                 }
 
                         #Assign a Phone Number to the User
-                        if (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A") -or ($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A"))
+                        if (($User.TelephoneNumber -eq "") -or ($User.TelephoneNumber -eq "null") -or ($User.TelephoneNumber -eq $null) -or ($User.TelephoneNumber -eq "N/A") -or ($User.NumberType -eq "") -or ($User.NumberType -eq "null") -or ($User.NumberType -eq $null) -or ($User.NumberType -eq "N/A"))
                             {
                                 if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Teams: Skipping the Assignment of a Phone Number as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow}
                                 Write-Log -Severity Info -Message "Teams: Skipping the Assignment of a Phone Number to $($User.UserPrincipalName) as the Value Provided for PhoneNumber and/or PhoneNumberType is NULL"  
@@ -917,30 +948,30 @@ function EM-UserProvisioning
                                     {
                                         if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
                                             {
-                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPhoneNumberToAssign -ErrorAction Stop
-                                                Write-Host "- Teams: Assigned the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
-                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
+                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -NumberType $User.NumberType -TelephoneNumber $UserPhoneNumberToAssign -ErrorAction Stop
+                                                Write-Host "- Teams: Assigned the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType) Successfully" -ForegroundColor Green
+                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType) Successfully"
                                             }
                                         else
                                             {
-                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPhoneNumberToAssign -LocationID $User.LocationID -ErrorAction Stop
-                                                Write-Host "- Teams: Assigned the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
-                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully"
+                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -NumberType $User.NumberType -TelephoneNumber $UserPhoneNumberToAssign -LocationID $User.LocationID -ErrorAction Stop
+                                                Write-Host "- Teams: Assigned the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
+                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID) Successfully"
                                             }
                                     }
                                 catch
                                     {
                                         if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
                                             {
-                                                Write-Host "- Teams: FAILED to Assign the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
-                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
-                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPhoneNumberToAssign) -ErrorAction Stop"
+                                                Write-Host "- Teams: FAILED to Assign the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType). The Error Was: $_" -ForegroundColor Red
+                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType). The Error Was: $_"
+                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -NumberType $($User.NumberType) -TelephoneNumber $($UserPhoneNumberToAssign) -ErrorAction Stop"
                                             }
                                         else
                                             {
-                                                Write-Host "- Teams: FAILED to Assign the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
-                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_"
-                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPhoneNumberToAssign) -LocationID $($User.LocationID) -ErrorAction Stop"
+                                                Write-Host "- Teams: FAILED to Assign the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
+                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPhoneNumberToAssign) PhoneNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID). The Error Was: $_"
+                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -NumberType $($User.NumberType) -TelephoneNumber $($UserPhoneNumberToAssign) -LocationID $($User.LocationID) -ErrorAction Stop"
                                             }
                                         $Script:StatusFlags += 0x1
                                     }
@@ -960,7 +991,7 @@ function EM-UserProvisioning
 
 
                         #Assign a Private Line to the User
-                        if (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A") -or ($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A"))
+                        if (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A") -or ($User.NumberType -eq "") -or ($User.NumberType -eq "null") -or ($User.NumberType -eq $null) -or ($User.NumberType -eq "N/A"))
                             {
                                 if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Teams: Skipping the Assignment of a Private Line as the Value Provided for PrivateLineNumber and/or PhoneNumberType is NULL" -ForegroundColor Yellow}
                                 Write-Log -Severity Info -Message "Teams: Skipping the Assignment of a Private Line to $($User.UserPrincipalName) as the Value Provided for PrivateLineNumber and/or PhoneNumberType is NULL"  
@@ -971,37 +1002,37 @@ function EM-UserProvisioning
                                     {
                                         if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
                                             {
-                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPrivateLineNumberToAssign -AssignmentCategory Private -ErrorAction Stop
-                                                Write-Host "- Teams: Assigned the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully" -ForegroundColor Green
-                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) Successfully"
+                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -NumberType $User.NumberType -TelephoneNumber $UserPrivateLineNumberToAssign -AssignmentCategory Private -ErrorAction Stop
+                                                Write-Host "- Teams: Assigned the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType) Successfully" -ForegroundColor Green
+                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType) Successfully"
                                             }
                                         else
                                             {
-                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -PhoneNumberType $User.PhoneNumberType -PhoneNumber $UserPrivateLineNumberToAssign -AssignmentCategory Private -LocationID $User.LocationID -ErrorAction Stop
-                                                Write-Host "- Teams: Assigned the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
-                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID) Successfully"
+                                                Set-CsPhoneNumberAssignment -Identity $User.UserPrincipalName -NumberType $User.NumberType -TelephoneNumber $UserPrivateLineNumberToAssign -AssignmentCategory Private -LocationID $User.LocationID -ErrorAction Stop
+                                                Write-Host "- Teams: Assigned the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID) Successfully" -ForegroundColor Green
+                                                Write-Log -Severity Info -Message "Teams: Assigned $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID) Successfully"
                                             }
                                     }
                                 catch
                                     {
                                         if (($User.LocationID -eq "") -or ($User.LocationID -eq $null))
                                             {
-                                                Write-Host "- Teams: FAILED to Assign the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_" -ForegroundColor Red
-                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType). The Error Was: $_"
-                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPrivateLineNumberToAssign) -AssignmentCategory Private -ErrorAction Stop"
+                                                Write-Host "- Teams: FAILED to Assign the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType). The Error Was: $_" -ForegroundColor Red
+                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType). The Error Was: $_"
+                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -NumberType $($User.NumberType) -TelephoneNumber $($UserPrivateLineNumberToAssign) -AssignmentCategory Private -ErrorAction Stop"
                                             }
                                         else
                                             {
-                                                Write-Host "- Teams: FAILED to Assign the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
-                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.PhoneNumberType) and LocationID of $($User.LocationID). The Error Was: $_"
-                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -PhoneNumberType $($User.PhoneNumberType) -PhoneNumber $($UserPrivateLineNumberToAssign) -AssignmentCategory Private -LocationID $($User.LocationID) -ErrorAction Stop"
+                                                Write-Host "- Teams: FAILED to Assign the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID). The Error Was: $_" -ForegroundColor Red
+                                                Write-Log -Severity ERR -Message "Teams: FAILED to Assign $($User.UserPrincipalName) the $($UserPrivateLineNumberToAssign) PrivateLineNumber with a PhoneNumberType of $($User.NumberType) and LocationID of $($User.LocationID). The Error Was: $_"
+                                                $Script:ErrorCommands += "Set-CsPhoneNumberAssignment -Identity $($User.UserPrincipalName) -NumberType $($User.NumberType) -TelephoneNumber $($UserPrivateLineNumberToAssign) -AssignmentCategory Private -LocationID $($User.LocationID) -ErrorAction Stop"
                                             }
                                         $Script:StatusFlags += 0x2
                                     }
                             }
 
                         #Enterprise Voice Enable Only a User - Used when a user only wants to be EV Enabled, but no DID assigned
-                        if ((($User.EnterpriseVoiceEnabled -eq "True") -or ($User.EnterpriseVoiceEnabled -eq $True ) -or ($User.EnterpriseVoiceEnabled -eq "Yes")) -and (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A")) -and (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A")) -and (($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A")))
+                        if ((($User.EnterpriseVoiceEnabled -eq "True") -or ($User.EnterpriseVoiceEnabled -eq $True ) -or ($User.EnterpriseVoiceEnabled -eq "Yes")) -and (($User.TelephoneNumber -eq "") -or ($User.TelephoneNumber -eq "null") -or ($User.TelephoneNumber -eq $null) -or ($User.TelephoneNumber -eq "N/A")) -and (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A")) -and (($User.NumberType -eq "") -or ($User.NumberType -eq "null") -or ($User.NumberType -eq $null) -or ($User.NumberType -eq "N/A")))
                             {
                                 try
                                     {
@@ -1018,13 +1049,13 @@ function EM-UserProvisioning
                                     }
                             }
                         #User has an assigned DID to either PhoneNumber or PrivateLineNumber and it provisioned successfully. If not successful, follow else statement
-                        elseif (($Script:StatusFlags -eq 0x0) -and (($User.PhoneNumber -ne "" ) -or ($User.PrivateLineNumber -ne "")) -and (($Script:User.EnterpriseVoiceEnabled -eq "TRUE") -or ($Script:User.EnterpriseVoiceEnabled -eq $True)))
+                        elseif (($Script:StatusFlags -eq 0x0) -and (($User.TelephoneNumber -ne "" ) -or ($User.PrivateLineNumber -ne "")) -and (($Script:User.EnterpriseVoiceEnabled -eq "TRUE") -or ($Script:User.EnterpriseVoiceEnabled -eq $True)))
                             {
                                     Write-Host "- Teams: Set EnterpriseVoiceEnabled to TRUE Successfully" -ForegroundColor Green
                                     Write-Log -Severity Info -Message "Teams: Set EnterpriseVoiceEnabled to TRUE for $($User.UserPrincipalName) Successfully"
                             }
                         #EVDisable Code - Not adding in to the codebase, but keeping here for reference as you should use the mass-disable mode
-                        #elseif ((($User.EnterpriseVoiceEnabled -eq "False") -or ($User.EnterpriseVoiceEnabled -eq $False ) -or ($User.EnterpriseVoiceEnabled -eq "No")) -and (($User.PhoneNumber -eq "") -or ($User.PhoneNumber -eq "null") -or ($User.PhoneNumber -eq $null) -or ($User.PhoneNumber -eq "N/A")) -and (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A")) -and (($User.PhoneNumberType -eq "") -or ($User.PhoneNumberType -eq "null") -or ($User.PhoneNumberType -eq $null) -or ($User.PhoneNumberType -eq "N/A")))
+                        #elseif ((($User.EnterpriseVoiceEnabled -eq "False") -or ($User.EnterpriseVoiceEnabled -eq $False ) -or ($User.EnterpriseVoiceEnabled -eq "No")) -and (($User.TelephoneNumber -eq "") -or ($User.TelephoneNumber -eq "null") -or ($User.TelephoneNumber -eq $null) -or ($User.TelephoneNumber -eq "N/A")) -and (($User.PrivateLineNumber -eq "") -or ($User.PrivateLineNumber -eq "null") -or ($User.PrivateLineNumber -eq $null) -or ($User.PrivateLineNumber -eq "N/A")) -and (($User.NumberType -eq "") -or ($User.NumberType -eq "null") -or ($User.NumberType -eq $null) -or ($User.NumberType -eq "N/A")))
                         else
                             {
                                 if ($Script:ConsoleDebugEnable -eq $True ){Write-Host "- Teams: Skipping Enterprise Voice ONLY Enablement as either EnterpriseVoiceEnabled is not TRUE and/or PhoneNumber/Type fields are not NULL." -ForegroundColor Yellow}
@@ -1209,6 +1240,8 @@ function EM-MainMenu
         Write-Host "$($Script:ConsoleDebugEnable)" -ForegroundColor Yellow
         Write-Host "Script GitHub Updater Enabled : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:ScriptUpdaterEnabled)" -ForegroundColor Yellow
+        Write-Host "Teams PS Module WAM Enabled   : "-ForegroundColor Green -NoNewLine
+        Write-Host "$($Script:TeamsWAMEnabled)" -ForegroundColor Yellow
         Write-Host "Script Log File Path          : "-ForegroundColor Green -NoNewLine
         Write-Host "$($Script:LogFilePath)`n`n" -ForegroundColor Yellow
         Write-Host "Admin Connections---------------------------------------------------------------------------------"
@@ -1216,6 +1249,7 @@ function EM-MainMenu
         Write-Host " Option 2: Optional - Connect to Graph PowerShell (Licensing & PW Expiration ONLY)" -ForegroundColor Green
         Write-Host " Option 3: Optional - Specify Tenant ID (Guest Access & Microsoft Partners)" -ForegroundColor Green
         Write-Host " Option 4: Optional - Change Microsoft 365 Cloud Environments" -ForegroundColor Green
+        Write-Host " Option 5: Optional - Toggle Teams PS Module WAM Enablement" -ForegroundColor Green
         Write-Host " Option 9: Disconnect All Admin Connections`n" -ForegroundColor Green
 
         Write-Host "Script Modes--------------------------------------------------------------------------------------"
@@ -1251,6 +1285,7 @@ function EM-MainMenu
         $Script:EnvInfo += "Script Beta Flights Enabled : $($Script:BetaFlightsEnabled)`n"
         $Script:EnvInfo += "Script Console Debug Enabled : $($Script:ConsoleDebugEnable)`n"
         $Script:EnvInfo += "Script GitHub Updater Enabled : $($Script:ScriptUpdaterEnabled)`n"
+        $Script:EnvInfo += "Teams PS Module WAM Enabled : $($Script:TeamsWAMEnabled)`n"
         $Script:EnvInfo += "Script Log File Path : $($Script:LogFilePath)"
         Write-Log -Severity Info -Message $($Script:EnvInfo)
     }
@@ -1393,6 +1428,26 @@ elseif ($Script:Confirm1 -eq "4")
 
         pause
         Write-Log -Severity Info -Message "Option 4: Optional - Change Microsoft 365 Cloud Environments Complete, Returning to the Main Menu"  
+    }
+
+if ($Script:Confirm1 -eq "5")
+    {
+        Write-Host "Option 5: Optional - Toggle Teams PS Module WAM Enablement Selected. Setting Up Connections...`n"
+        Write-Log -Severity Info -Message "Option 5: Optional - Toggle Teams PS Module WAM Enablement Selected. Setting Up Connections..."
+        Write-Host "Toggling WAM Enablement for the Teams PowerShell Module. This is sadly only temporary for 7.9.0 PowerShell and will be deprecated in future released`n"
+        
+        if ($Script:TeamsWAMEnabled -eq $True)
+            {
+                $Script:TeamsWAMEnabled = $False
+            }
+        else
+            {
+                $Script:TeamsWAMEnabled = $True
+            }
+        
+        Write-Host "Teams PS Module WAM Enablement set to $($Script:TeamsWAMEnabled)"
+        pause
+        Write-Log -Severity Info -Message "Option 5: Optional - Toggle Teams PS Module WAM Enablement Complete, Returning to the Main Menu"
     }
 
 elseif ($Script:Confirm1 -eq "9")
